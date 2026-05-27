@@ -133,10 +133,10 @@ export default function DashboardView() {
               <ul id="display-npcs-alive" className="npc-status-list">
                 {dadosGlobais.players?.filter(p => !p.isDead).map(p => (
                   <li key={p.id} onClick={() => { setActiveData(p); setModals((prev: any) => ({ ...prev, summaryCard: true })); }} style={{ cursor: "pointer", fontWeight: "bold", color: "var(--primary-color)" }}>
-                    {p.name} (PC)
+                    {p.name}
                   </li>
                 ))}
-                {dadosGlobais.npcs?.filter(n => !n.isDead && !n.isHidden).map(n => (
+                {dadosGlobais.npcs?.filter(n => !n.isDead && !n.isHidden && n.faction !== 'enemy').map(n => (
                   <li key={n.id} onClick={() => { setActiveData(n); setModals((prev: any) => ({ ...prev, summaryCard: true })); }} style={{ cursor: "pointer" }}>
                     {n.name}
                   </li>
@@ -145,22 +145,17 @@ export default function DashboardView() {
             </div>
             <div className="npc-status-group mt-4">
               <h4 className="text-danger">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                  <polyline points="2 17 12 22 22 17"></polyline>
-                  <polyline points="2 12 12 17 22 12"></polyline>
-                </svg>{" "}
                 Caídos / Mortos
               </h4>
               <ul id="display-npcs-dead" className="npc-status-list">
                 {dadosGlobais.players?.filter(p => p.isDead).map(p => (
-                  <li key={p.id} onClick={() => { setActiveData(p); setModals((prev: any) => ({ ...prev, summaryCard: true })); }} style={{ cursor: "pointer", fontWeight: "bold", color: "var(--primary-color)" }}>
-                    {p.name} (PC)
+                  <li key={p.id} className="dead-member" onClick={() => { setActiveData(p); setModals((prev: any) => ({ ...prev, summaryCard: true })); }} style={{ cursor: "pointer", fontWeight: "bold" }}>
+                    💀 {p.name}
                   </li>
                 ))}
-                {dadosGlobais.npcs?.filter(n => n.isDead && !n.isHidden).map(n => (
-                  <li key={n.id} onClick={() => { setActiveData(n); setModals((prev: any) => ({ ...prev, summaryCard: true })); }} style={{ cursor: "pointer" }}>
-                    {n.name}
+                {dadosGlobais.npcs?.filter(n => n.isDead && !n.isHidden && n.faction !== 'enemy').map(n => (
+                  <li key={n.id} className="dead-member" onClick={() => { setActiveData(n); setModals((prev: any) => ({ ...prev, summaryCard: true })); }} style={{ cursor: "pointer" }}>
+                    💀 {n.name}
                   </li>
                 ))}
               </ul>

@@ -6,12 +6,35 @@ import { blocosDeTempo } from "@/lib/gameData";
 import CelestialIcon from "../ui/CelestialIcon";
 
 export default function DashboardBlock() {
-  const { diaAtual, indiceBlocoAtivo, jornadaPorDia, setJornadaPorDia, dadosGlobais, setModals, setActiveData, salvarEstadoLocal } = useAppContext();
+  const { diaAtual, indiceBlocoAtivo, jornadaPorDia, setJornadaPorDia, dadosGlobais, setDadosGlobais, setModals, setActiveData, salvarEstadoLocal } = useAppContext();
 
   const dayData = jornadaPorDia[diaAtual];
   if (!dayData || !dayData.blocos) return null;
 
   const bData = dayData.blocos[indiceBlocoAtivo];
+
+  const handleConcluirAcao = (e: React.MouseEvent, playerId: string, acaoId: number, isSleeping: boolean) => {
+    e.stopPropagation();
+    const newJornada = { ...jornadaPorDia };
+    const pSession = newJornada[diaAtual].blocos[indiceBlocoAtivo].playerSessions[playerId];
+    if (pSession && pSession.acoes) {
+      const idx = pSession.acoes.findIndex((a: any) => typeof a === 'object' && a.id === acaoId);
+      if (idx !== -1) {
+         pSession.acoes[idx].concluida = true;
+      }
+    }
+    setJornadaPorDia(newJornada);
+    
+    if (isSleeping) {
+       const newPlayers = [...dadosGlobais.players];
+       const idx = newPlayers.findIndex(p => p.id === playerId);
+       if(idx !== -1) {
+         newPlayers[idx].isSleepingAction = false;
+         setDadosGlobais({...dadosGlobais, players: newPlayers});
+       }
+    }
+    setTimeout(salvarEstadoLocal, 100);
+  };
   const bloco = blocosDeTempo[indiceBlocoAtivo];
   const players = dadosGlobais.players || [];
 
@@ -32,28 +55,31 @@ export default function DashboardBlock() {
   const openGlobalEvent = (index?: number) => {
     if (index !== undefined) {
       setActiveData({ blocoIndex: indiceBlocoAtivo, topicIndex: index, type: "timeline", data: bData.timeline[index] });
+      setModals((prev: any) => ({ ...prev, globalEventDetail: true }));
     } else {
       setActiveData({ blocoIndex: indiceBlocoAtivo, type: "timeline", data: { title: '', desc: '', trigger: '', save: '', damage: '' } });
+      setModals((prev: any) => ({ ...prev, globalEvent: true }));
     }
-    setModals((prev: any) => ({ ...prev, globalEvent: true }));
   };
 
   const openMainQuest = (index?: number) => {
     if (index !== undefined) {
       setActiveData({ blocoIndex: indiceBlocoAtivo, topicIndex: index, type: "plots", data: bData.plots[index] });
+      setModals((prev: any) => ({ ...prev, mainQuestDetail: true }));
     } else {
       setActiveData({ blocoIndex: indiceBlocoAtivo, type: "plots", data: { title: '', day: diaAtual, phases: [], notes: '' } });
+      setModals((prev: any) => ({ ...prev, mainQuest: true }));
     }
-    setModals((prev: any) => ({ ...prev, mainQuest: true }));
   };
 
   const openSideQuest = (index?: number) => {
     if (index !== undefined) {
       setActiveData({ blocoIndex: indiceBlocoAtivo, topicIndex: index, type: "sidequests", data: bData.sidequests[index] });
+      setModals((prev: any) => ({ ...prev, sideQuestDetail: true }));
     } else {
       setActiveData({ blocoIndex: indiceBlocoAtivo, type: "sidequests", data: { title: '', day: diaAtual, npc: '', desc: '', tests: [] } });
+      setModals((prev: any) => ({ ...prev, sideQuest: true }));
     }
-    setModals((prev: any) => ({ ...prev, sideQuest: true }));
   };
 
   const openPlayerManage = (player: any) => {
@@ -122,14 +148,25 @@ export default function DashboardBlock() {
                     </div>
                     {t.save || t.damage ? (
                       <div className="world-card-mechanics">
-                        {t.save && <span className="mechanic-badge save-badge">{t.save}</span>}
-                        {t.damage && <span className="mechanic-badge damage-badge">{t.damage}</span>}
+                        {t.save && (
+                          <span className="mechanic-badge save-badge">
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                            {t.save}
+                          </span>
+                        )}
+                        {t.damage && (
+                          <span className="mechanic-badge damage-badge">
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                            {t.damage}
+                          </span>
+                        )}
                       </div>
                     ) : (
-                      <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: 0, fontStyle: "italic" }}>
+                      <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: 0, fontStyle: "italic", marginTop: "0.5rem", paddingTop: "0.5rem", borderTop: "1px dashed var(--border-subtle)" }}>
                         {t.desc ? (t.desc.length > 60 ? t.desc.substring(0, 60) + '…' : t.desc) : 'Sem descrição.'}
                       </p>
                     )}
+                    <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: "0.5rem", display: "block", opacity: 0.6 }}>Clique para detalhes</span>
                   </div>
                 )) : <p className="text-muted text-center py-2" style={{ fontSize: "0.8rem" }}>Nenhum evento registrado.</p>}
               </div>
@@ -171,6 +208,7 @@ export default function DashboardBlock() {
                           </div>
                         </div>
                       ) : <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: 0, fontStyle: "italic" }}>Nenhuma fase registrada.</p>}
+                      <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: "0.5rem", display: "block", opacity: 0.6 }}>Clique para detalhes</span>
                     </div>
                   );
                 }) : <p className="text-muted text-center py-2" style={{ fontSize: "0.8rem" }}>Nenhuma quest registrada.</p>}
@@ -213,6 +251,7 @@ export default function DashboardBlock() {
                           </div>
                         </div>
                       )}
+                      <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: "0.5rem", display: "block", opacity: 0.6 }}>Clique para detalhes</span>
                     </div>
                   );
                 }) : <p className="text-muted text-center py-2" style={{ fontSize: "0.8rem" }}>Nenhuma side quest registrada.</p>}
@@ -237,43 +276,114 @@ export default function DashboardBlock() {
                 <span>Acesse a aba <strong>Jogadores</strong> para adicionar personagens.</span>
               </div>
             ) : players.map((player: any) => {
-              const pSession = bData.playerSessions?.[player.id] || { acoes: [], objetivos: [], concluido: false };
+              const pSessionRaw = bData.playerSessions?.[player.id] || {};
+              const pSession = {
+                acoes: pSessionRaw.acoes || [],
+                objetivos: pSessionRaw.objetivos || [],
+                concluido: !!pSessionRaw.concluido
+              };
               const hpPct = player.hpMax > 0 ? Math.max(0, Math.min(100, ((player.hpCurrent || player.hpMax) / player.hpMax) * 100)) : 0;
               let hpColorClass = hpPct <= 25 ? 'danger' : hpPct <= 50 ? 'warning' : '';
               const isDone = pSession.concluido;
-              const firstAcao = pSession.acoes[0];
-              const acaoText = firstAcao ? (typeof firstAcao === 'object' ? firstAcao.text : firstAcao) : '';
+              const acoesList = pSession.acoes || [];
+              const acaoAtiva = acoesList.find((a: any) => typeof a === 'object' && !a.concluida);
+              const completedAcoes = acoesList.filter((a: any) => typeof a === 'object' && a.concluida);
+              
+              let acaoText = '';
+              if (acaoAtiva) {
+                 acaoText = acaoAtiva.type && acaoAtiva.type !== 'Livre / Outro' ? acaoAtiva.type : (acaoAtiva.text || 'Livre');
+              }
+
+              const totalTimeSpent = (pSession.acoes || []).reduce((sum: number, a: any) => {
+                 if (typeof a === 'object') return sum + (a.timeCost || 0);
+                 return sum + 60;
+              }, 0);
+              const remainingTime = 240 - totalTimeSpent;
 
               return (
-                <div key={player.id} className={`spc-card ${isDone ? 'spc-done' : ''} ${player.isDead ? 'spc-dead' : ''}`} onClick={() => openPlayerManage(player)}>
-                  <div className="spc-header">
-                    <div className="spc-avatar-wrap">
-                      {player.image ? (
-                        <img src={player.image} className="spc-avatar-img" alt="" />
-                      ) : (
-                        <div className="spc-avatar-placeholder">{player.name.charAt(0).toUpperCase()}</div>
-                      )}
-                      {isDone && <span className="spc-done-badge">✓</span>}
+                <div key={player.id} className={`spc-card ${isDone ? 'spc-done' : ''} ${player.isDead ? 'spc-dead' : ''}`} onClick={() => { setActiveData({ blocoIndex: indiceBlocoAtivo, player }); setModals((prev: any) => ({ ...prev, sessionPlayer: true })); }} style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px", background: "rgba(0,0,0,0.3)", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.05)", position: "relative", overflow: "hidden" }}>
+                  
+                  {/* HEADER: Identity + HP */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                      <div style={{ position: "relative", width: "48px", height: "48px", borderRadius: "50%", overflow: "hidden", border: `2px solid ${hpPct <= 25 ? '#ef4444' : hpPct <= 50 ? '#f59e0b' : 'rgba(255,255,255,0.1)'}` }}>
+                        {player.image ? (
+                          <img src={player.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: player.isDead ? "grayscale(100%)" : "none" }} />
+                        ) : (
+                          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.05)", fontWeight: "bold", fontSize: "1.2rem", color: "var(--text-muted)" }}>{player.name.charAt(0).toUpperCase()}</div>
+                        )}
+                        {isDone && <div style={{ position: "absolute", bottom: 0, right: 0, background: "#10b981", width: "14px", height: "14px", borderRadius: "50%", border: "2px solid #000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5rem", color: "#fff", fontWeight: "bold", zIndex: 2 }}>✓</div>}
+                        {player.isDead && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 }}><span style={{ fontSize: "1.5rem" }}>💀</span></div>}
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column" }}>
+                        <span style={{ fontSize: "1.05rem", fontWeight: 800, color: "#fff", lineHeight: 1.1 }}>{player.name}</span>
+                        <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.02em", marginTop: "2px" }}>{player.classLevel || 'Sem classe'}</span>
+                      </div>
                     </div>
-                    <div className="spc-info">
-                      <span className="spc-name">{player.name}</span>
-                      <span className="spc-class">{player.classLevel || 'Sem classe'}</span>
+                    {/* HP PILL */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px", background: hpPct <= 25 ? "rgba(239,68,68,0.15)" : hpPct <= 50 ? "rgba(245,158,11,0.15)" : "rgba(255,255,255,0.05)", padding: "4px 10px", borderRadius: "20px", border: `1px solid ${hpPct <= 25 ? "rgba(239,68,68,0.3)" : hpPct <= 50 ? "rgba(245,158,11,0.3)" : "rgba(255,255,255,0.1)"}` }}>
+                      <span style={{ fontSize: "0.7rem" }}>❤️</span>
+                      <span style={{ fontSize: "0.85rem", fontWeight: 800, color: hpPct <= 25 ? "#ef4444" : hpPct <= 50 ? "#f59e0b" : "#10b981" }}>{player.hpCurrent || player.hpMax || 0} <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 500 }}>/ {player.hpMax || 0}</span></span>
                     </div>
                   </div>
-                  <div className="spc-hp-row">
-                    <div className="spc-hp-bar-bg">
-                      <div className={`spc-hp-bar-fill ${hpColorClass}`} style={{ width: `${hpPct}%` }}></div>
-                    </div>
-                    <span className="spc-hp-text">{player.hpCurrent || player.hpMax || 0}/{player.hpMax || 0}</span>
-                  </div>
-                  <div className="spc-action-preview">
-                    {acaoText ? (
-                      <span className="spc-action-text">{acaoText}{pSession.acoes.length > 1 ? '…' : ''}</span>
+
+                  {/* BODY: Current Action */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px" }}>
+                    {player.isSleepingAction && acaoAtiva ? (
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(99, 102, 241, 0.15)", padding: "8px 12px", borderRadius: "8px", border: "1px solid rgba(99, 102, 241, 0.3)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span style={{ fontSize: "1rem" }}>💤</span>
+                          <span style={{ fontSize: "0.85rem", color: "#818cf8", fontWeight: 700 }}>Dormindo / Descanso</span>
+                        </div>
+                        <button 
+                           onClick={(e) => handleConcluirAcao(e, player.id, acaoAtiva.id, true)} 
+                           style={{ fontSize: "0.7rem", padding: "4px 12px", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "6px", color: "#fff", cursor: "pointer", fontWeight: "bold", transition: "all 0.2s" }}
+                        >
+                          Acordar
+                        </button>
+                      </div>
+                    ) : acaoAtiva ? (
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.03)", padding: "8px 12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#8b5cf6" }}></div>
+                          <span style={{ fontSize: "0.85rem", color: "var(--text-primary)", fontWeight: 600 }}>{acaoText}</span>
+                        </div>
+                        <button 
+                           onClick={(e) => handleConcluirAcao(e, player.id, acaoAtiva.id, false)} 
+                           style={{ fontSize: "0.7rem", padding: "4px 12px", background: "rgba(139, 92, 246, 0.2)", border: "1px solid rgba(139, 92, 246, 0.5)", borderRadius: "6px", color: "#ddd", cursor: "pointer", fontWeight: "bold", transition: "all 0.2s" }}
+                        >
+                          Concluir
+                        </button>
+                      </div>
                     ) : (
-                      <span className="spc-no-action">Sem ações registradas</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(255,255,255,0.01)", padding: "8px 12px", borderRadius: "8px", border: "1px dashed rgba(255,255,255,0.1)" }}>
+                        <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontStyle: "italic" }}>
+                          {completedAcoes.length > 0 ? "Aguardando próxima ação..." : "Aguardando ação..."}
+                        </span>
+                      </div>
                     )}
-                    {pSession.objetivos.length > 0 && <span className="spc-obj-badge">{pSession.objetivos.length}</span>}
                   </div>
+
+                  {/* FOOTER: Time and Exhaustion */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "2px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.75rem", color: remainingTime < 0 ? "#ef4444" : "var(--text-muted)" }}>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                      <strong>{Math.floor(Math.abs(remainingTime)/60)}h {Math.abs(remainingTime)%60}m {remainingTime < 0 ? 'excedidos' : 'restantes'}</strong> no bloco
+                    </div>
+
+                    {(player.exhaustionLevel || 0) > 0 && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(239,68,68,0.1)", padding: "6px 10px", borderRadius: "6px", borderLeft: "3px solid #ef4444", marginTop: "4px" }}>
+                        <span style={{ fontSize: "0.9rem" }}>⚠️</span>
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          <span style={{ fontSize: "0.7rem", fontWeight: 800, color: "#fca5a5", textTransform: "uppercase" }}>Exaustão {player.exhaustionLevel}</span>
+                          <span style={{ fontSize: "0.65rem", color: "#fecaca", lineHeight: 1.1, marginTop: "1px" }}>
+                            {player.exhaustionLevel === 1 ? "Desv. em Habilidades" : player.exhaustionLevel === 2 ? "Deslocamento Metade" : player.exhaustionLevel === 3 ? "Desv. em Ataque/Salv." : player.exhaustionLevel === 4 ? "HP Máximo / 2" : player.exhaustionLevel === 5 ? "Deslocamento 0" : "Morte"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               );
             })}

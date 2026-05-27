@@ -774,6 +774,15 @@ body.theme-noturna .particle {
     border-color: var(--border-bright);
 }
 
+.npc-status-list li.dead-member:hover {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: var(--danger);
+    color: #ef4444 !important;
+    transform: translateX(4px) scale(1.02);
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.25);
+    text-shadow: 0 0 4px rgba(239, 68, 68, 0.3);
+}
+
 /* Active Block Animations and Cards */
 .dash-active-block-container {
     display: flex;
@@ -5191,3 +5200,26 @@ body.hide-combat-effects .npc-card-combat-console {
     }
 }
 
+/* ====== DEAD MODAL HOVER EFFECTS IN SUMMARY ====== */
+.dead-modal-content {
+    position: relative;
+    filter: grayscale(100%) brightness(0.65);
+    transition: filter 0.3s ease;
+}
+
+.modal-skull-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.15);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.dead-modal-content:hover .modal-skull-overlay {
+    opacity: 1;
+}

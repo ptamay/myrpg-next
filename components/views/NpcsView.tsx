@@ -5,7 +5,7 @@ import { useAppContext } from "@/contexts/AppContext";
 import NpcCard from "./NpcCard";
 
 export default function NpcsView() {
-  const { dadosGlobais, setModals, setActiveData } = useAppContext();
+  const { dadosGlobais, setDadosGlobais, setModals, setActiveData } = useAppContext();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const [combatMode, setCombatMode] = useState(false);
@@ -48,8 +48,9 @@ export default function NpcsView() {
           } else {
             alert("Formato inválido. Não foram encontrados NPCs neste arquivo.");
           }
-        } catch (err) {
-          alert("Erro ao ler o arquivo JSON.");
+        } catch (err: any) {
+          console.error("Erro de parsing JSON:", err);
+          alert("Erro ao ler o arquivo JSON. Detalhes: " + (err.message || err));
         }
       };
       reader.readAsText(file);
@@ -173,7 +174,7 @@ export default function NpcsView() {
                     !npc.title?.toLowerCase().includes(searchTerm.toLowerCase()) && 
                     !npc.faction?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
                 
-                if (activeFilter === "all") return !npc.isHidden && !npc.isDead;
+                if (activeFilter === "all") return !npc.isHidden;
                 if (activeFilter === "dead") return npc.isDead;
                 if (activeFilter === "hidden") return npc.isHidden;
                 
@@ -182,6 +183,11 @@ export default function NpcsView() {
                 if (activeFilter === "neutral") return npc.faction === "neutral" || !npc.faction;
                 if (activeFilter === "enemy") return npc.faction === "enemy";
                 return true;
+              })
+              .sort((a: any, b: any) => {
+                const aDead = a.isDead ? 1 : 0;
+                const bDead = b.isDead ? 1 : 0;
+                return aDead - bDead;
               })
               .map((npc: any) => (
                 <NpcCard key={npc.id} npc={npc} combatMode={combatMode} hideEffects={hideEffects} />

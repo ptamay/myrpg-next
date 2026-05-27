@@ -126,3 +126,75 @@ export default function GlobalEventModal({ isOpen, onClose }: GlobalEventModalPr
     </Modal>
   );
 }
+
+export function GlobalEventDetailModal({ isOpen, onClose }: GlobalEventModalProps) {
+  const { activeData, setModals } = useAppContext();
+  
+  if (!activeData || !activeData.data) return null;
+  const { title, desc, trigger, save, damage } = activeData.data;
+
+  const handleEdit = () => {
+    setModals((prev: any) => ({ ...prev, globalEventDetail: false, globalEvent: true }));
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} id="global-event-detail-modal">
+      <div className="modal-content modal-md glass-panel">
+        <header className="modal-header" style={{ background: "hsla(0,0%,0%,0.3)" }}>
+          <div className="modal-title-group">
+            <span className="modal-subtitle">Mundo Aberto — Evento Global</span>
+            <h2 className="modal-title" style={{ fontSize: "1.5rem" }}>{title || 'Evento Sem Título'}</h2>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <button onClick={handleEdit} className="btn primary-btn small-btn" style={{ display: "flex", alignItems: "center", gap: "6px", padding: "0.4rem 0.9rem" }}>
+              Editar
+            </button>
+            <button className="close-btn" onClick={onClose}>
+              <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        </header>
+        <div className="modal-body custom-scrollbar" style={{ gap: "1.25rem" }}>
+          {desc && (
+            <div style={{ marginBottom: "1rem" }}>
+              <p style={{ fontSize: "0.95rem", lineHeight: 1.6, color: "var(--text-primary)", fontStyle: "italic", borderLeft: "3px solid var(--accent-primary)", paddingLeft: "1rem" }}>
+                "{desc}"
+              </p>
+            </div>
+          )}
+          
+          {(trigger || save || damage) && (
+            <div className="mechanics-block glass-panel highlight-box" style={{ padding: "1.25rem" }}>
+              <h4 style={{ fontSize: "0.85rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-secondary)", marginBottom: "1rem" }}>Mecânica (D&D 5e)</h4>
+              
+              {trigger && (
+                <div style={{ marginBottom: "0.75rem" }}>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-muted)", display: "block" }}>Gatilho</span>
+                  <span style={{ fontSize: "0.9rem", color: "var(--text-primary)" }}>{trigger}</span>
+                </div>
+              )}
+              
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                {save && (
+                  <div>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-muted)", display: "block" }}>Resistência</span>
+                    <span style={{ fontSize: "0.9rem", color: "var(--accent-secondary)", fontWeight: 700 }}>{save}</span>
+                  </div>
+                )}
+                {damage && (
+                  <div>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-muted)", display: "block" }}>Consequência / Dano</span>
+                    <span style={{ fontSize: "0.9rem", color: "var(--danger)", fontWeight: 700 }}>{damage}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}

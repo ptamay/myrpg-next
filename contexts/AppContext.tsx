@@ -29,6 +29,7 @@ interface AppContextData {
     playerManage: boolean;
     passDay: boolean;
     globalEvent: boolean;
+    globalEventDetail: boolean;
     crop: boolean;
     mainQuest: boolean;
     mainQuestDetail: boolean;
@@ -37,6 +38,7 @@ interface AppContextData {
     importNpcText: boolean;
     importNpcOptions: boolean;
     summaryCard: boolean;
+    sessionPlayer: boolean;
   };
   setModals: React.Dispatch<React.SetStateAction<any>>;
   activeData: any; // Data for detail modals
@@ -68,6 +70,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     playerManage: false,
     passDay: false,
     globalEvent: false,
+    globalEventDetail: false,
     crop: false,
     mainQuest: false,
     mainQuestDetail: false,
@@ -76,6 +79,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     importNpcText: false,
     importNpcOptions: false,
     summaryCard: false,
+    sessionPlayer: false,
   });
   const [activeData, setActiveData] = useState<any>(null);
 

@@ -24,11 +24,36 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
   const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [attacksState, setAttacksState] = useState<any[]>([]);
+  const [selectedSaves, setSelectedSaves] = useState<string[]>([]);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [profBonusState, setProfBonusState] = useState<string>("2");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       setAvatarBase64(activeData?.image || null);
+      if (activeData?.attacks && activeData.attacks.length > 0) {
+        const currentAttacks = [...activeData.attacks];
+        while (currentAttacks.length < 3) {
+          currentAttacks.push({ name: "", bonus: "", dmg: "" });
+        }
+        setAttacksState(currentAttacks);
+      } else {
+        setAttacksState([
+          { name: "", bonus: "", dmg: "" },
+          { name: "", bonus: "", dmg: "" },
+          { name: "", bonus: "", dmg: "" }
+        ]);
+      }
+      
+      const initialSaves = Array.isArray(activeData?.saves) ? activeData.saves : (typeof activeData?.saves === 'string' && activeData.saves ? activeData.saves.split(',').map((s:string) => s.trim()) : []);
+      setSelectedSaves(initialSaves);
+      
+      const initialSkills = Array.isArray(activeData?.skills) ? activeData.skills : (typeof activeData?.skills === 'string' && activeData.skills ? activeData.skills.split(',').map((s:string) => s.trim()) : []);
+      setSelectedSkills(initialSkills);
+
+      setProfBonusState(activeData?.profBonus || "2");
     }
   }, [isOpen, activeData]);
 
@@ -52,12 +77,21 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
     const hpMax = parseInt(formData.get("hpMax") as string) || 0;
 
     // Process attacks
-    const atkName = formData.get("atkName");
-    const attacks = atkName ? [{
-      name: atkName,
-      bonus: formData.get("atkBonus"),
-      dmg: formData.get("atkDmg")
-    }] : (activeData?.attacks || []);
+    const formAttacks: any[] = [];
+    const atkNames = formData.getAll("atkName");
+    const atkBonuses = formData.getAll("atkBonus");
+    const atkDmgs = formData.getAll("atkDmg");
+    
+    for (let i = 0; i < atkNames.length; i++) {
+      if (atkNames[i] || atkBonuses[i] || atkDmgs[i]) {
+        formAttacks.push({
+          name: atkNames[i],
+          bonus: atkBonuses[i],
+          dmg: atkDmgs[i]
+        });
+      }
+    }
+    const attacks = formAttacks;
 
     const playerData = {
       id,
@@ -72,7 +106,7 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
       wis: formData.get("wis"),
       cha: formData.get("cha"),
       hpMax,
-      hpCurrent: activeData ? activeData.hpCurrent : hpMax,
+      hpCurrent: activeData?.hpCurrent !== undefined ? activeData.hpCurrent : hpMax,
       image: avatarBase64,
       ac: formData.get("ac"),
       init: formData.get("init"),
@@ -82,9 +116,10 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
       inspiration: formData.get("inspiration") === "on",
       attacks,
       isDead: activeData?.isDead || false,
-      saves: formData.getAll("saves"),
-      skills: formData.getAll("skills"),
-      profBonus: formData.get("profBonus"),
+      saves: selectedSaves,
+      skills: selectedSkills,
+      profBonus: profBonusState,
+      minSleepReq: parseInt(formData.get("minSleepReq") as string) || 8,
     };
 
     const newPlayers = [...(dadosGlobais.players || [])];
@@ -185,6 +220,7 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
                 <div className="form-group flex-1"><label>Iniciativa</label><input type="text" name="init" className="journey-input" defaultValue={activeData?.init || ""} /></div>
                 <div className="form-group flex-1"><label>Deslocamento</label><input type="text" name="speed" className="journey-input" defaultValue={activeData?.speed || ""} /></div>
                 <div className="form-group flex-1"><label>Percepção Pas.</label><input type="number" name="perc" className="journey-input" min="0" defaultValue={activeData?.perc || ""} /></div>
+                <div className="form-group flex-1"><label>Descanso Mín.</label><input type="number" name="minSleepReq" className="journey-input" min="0" defaultValue={activeData?.minSleepReq || "8"} title="Tempo mínimo de sono em horas" /></div>
               </div>
 
               <h4 className="form-section-title mt-4">Combate & Ataques (D&D 5e)</h4>
@@ -200,20 +236,25 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
                 </div>
               </div>
 
-              <label style={{ marginTop: "14px", marginBottom: "6px", display: "block", fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)" }}>
-                Ataques Rápidos (ex: Espada, Arco, Magias)
+              <label style={{ marginTop: "14px", marginBottom: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)" }}>
+                <span>Ataques Rápidos (ex: Espada, Arco, Magias)</span>
+                <button type="button" onClick={() => setAttacksState([...attacksState, { name: "", bonus: "", dmg: "" }])} className="btn success-btn small-btn" style={{ padding: "2px 8px", fontSize: "0.7rem", height: "auto" }}>
+                  + Adicionar Ataque
+                </button>
               </label>
-              <div className="form-row" style={{ gap: "8px" }}>
-                <div className="form-group flex-3"><input type="text" name="atkName" className="journey-input" placeholder="Nome da Arma/Ataque" defaultValue={activeData?.attacks?.[0]?.name || ""} /></div>
-                <div className="form-group flex-1"><input type="text" name="atkBonus" className="journey-input" placeholder="Bônus" defaultValue={activeData?.attacks?.[0]?.bonus || ""} /></div>
-                <div className="form-group flex-2"><input type="text" name="atkDmg" className="journey-input" placeholder="Dano/Tipo" defaultValue={activeData?.attacks?.[0]?.dmg || ""} /></div>
-              </div>
+              {attacksState.map((atk, index) => (
+                <div className="form-row" style={{ gap: "8px", marginBottom: "8px" }} key={index}>
+                  <div className="form-group flex-3"><input type="text" name="atkName" className="journey-input" placeholder="Nome da Arma/Ataque" defaultValue={atk.name} /></div>
+                  <div className="form-group flex-1"><input type="text" name="atkBonus" className="journey-input" placeholder="Bônus" defaultValue={atk.bonus} /></div>
+                  <div className="form-group flex-2"><input type="text" name="atkDmg" className="journey-input" placeholder="Dano/Tipo" defaultValue={atk.dmg} /></div>
+                </div>
+              ))}
 
               <h4 className="form-section-title mt-4">Proficiências (D&D 5e)</h4>
               <div className="form-row">
                 <div className="form-group flex-1">
                   <label>Bônus de Proficiência</label>
-                  <input type="number" name="profBonus" className="journey-input" defaultValue={activeData?.profBonus || "2"} min="0" />
+                  <input type="number" name="profBonus" className="journey-input" value={profBonusState} onChange={(e) => setProfBonusState(e.target.value)} min="0" />
                 </div>
               </div>
               <div className="form-row mt-2">
@@ -221,10 +262,12 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
                   <label>Salvaguardas com Proficiência</label>
                   <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", background: "rgba(0,0,0,0.2)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
                     {SAVES_LIST.map(save => {
-                      const isChecked = Array.isArray(activeData?.saves) ? activeData.saves.includes(save) : typeof activeData?.saves === 'string' && activeData.saves.includes(save);
                       return (
                         <label key={save} className="custom-checkbox-container" style={{ fontSize: "0.85rem", fontWeight: "bold", display: "flex", alignItems: "center" }}>
-                          <input type="checkbox" name="saves" value={save} defaultChecked={isChecked} /> {save}
+                          <input type="checkbox" name="saves" value={save} checked={selectedSaves.includes(save)} onChange={(e) => {
+                            if (e.target.checked) setSelectedSaves(prev => [...prev, save]);
+                            else setSelectedSaves(prev => prev.filter(s => s !== save));
+                          }} /> {save}
                         </label>
                       );
                     })}
@@ -236,10 +279,12 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
                   <label>Perícias com Proficiência</label>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "10px", background: "rgba(0,0,0,0.2)", padding: "15px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
                     {SKILLS_LIST.map(skill => {
-                      const isChecked = Array.isArray(activeData?.skills) ? activeData.skills.includes(skill) : typeof activeData?.skills === 'string' && activeData.skills.includes(skill);
                       return (
                         <label key={skill} className="custom-checkbox-container" style={{ fontSize: "0.85rem", display: "flex", alignItems: "center" }}>
-                          <input type="checkbox" name="skills" value={skill} defaultChecked={isChecked} /> {skill}
+                          <input type="checkbox" name="skills" value={skill} checked={selectedSkills.includes(skill)} onChange={(e) => {
+                            if (e.target.checked) setSelectedSkills(prev => [...prev, skill]);
+                            else setSelectedSkills(prev => prev.filter(s => s !== skill));
+                          }} /> {skill}
                         </label>
                       );
                     })}

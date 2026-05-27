@@ -18,15 +18,24 @@ export default function SummaryCardModal({ isOpen, onClose }: { isOpen: boolean;
   const badgeRedSolid = { background: "#ef4444", color: "#ffffff", border: "1px solid #ef4444" };
   
   let factionBadge = null;
-  if (!isPlayer) {
-    if (activeData.faction === 'ally') factionBadge = { label: "ALIADO", style: badgeGreen };
-    else if (activeData.faction === 'enemy') factionBadge = { label: "INIMIGO", style: badgeRed };
-    else factionBadge = { label: "NEUTRO", style: { background: "rgba(255, 255, 255, 0.1)", color: "#aaa", border: "1px solid rgba(255,255,255,0.2)" }};
-  }
+  const currentFaction = isPlayer ? 'ally' : activeData.faction;
+  if (currentFaction === 'ally') factionBadge = { label: "ALIADO", style: badgeGreen };
+  else if (currentFaction === 'enemy') factionBadge = { label: "INIMIGO", style: badgeRed };
+  else factionBadge = { label: "NEUTRO", style: { background: "rgba(255, 255, 255, 0.1)", color: "#aaa", border: "1px solid rgba(255,255,255,0.2)" }};
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} id="summary-card-modal">
-      <div className="modal-content" style={{ maxWidth: "480px", background: "#09090b", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", padding: 0, overflow: "hidden" }}>
+      <div className={`modal-content ${isDead ? "dead-modal-content" : ""}`} style={{ maxWidth: isPlayer ? "800px" : "480px", width: "100%", background: "#09090b", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", padding: 0, overflow: "hidden" }}>
+        {isDead && (
+          <div className="modal-skull-overlay">
+            <svg viewBox="0 0 24 24" width="60%" height="60%" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 10a8 8 0 1 1 16 0c0 3.18-1.83 6-4.66 7.4L15 22H9l-.34-4.6C5.83 16 4 13.18 4 10z" />
+              <path d="M10 14h4" />
+              <circle cx="8.5" cy="10" r="1" fill="currentColor" />
+              <circle cx="15.5" cy="10" r="1" fill="currentColor" />
+            </svg>
+          </div>
+        )}
         
         <header style={{ padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
           <div>
@@ -56,31 +65,16 @@ export default function SummaryCardModal({ isOpen, onClose }: { isOpen: boolean;
                   alt="Avatar" 
                   style={{ 
                     width: "100%", height: "100%", objectFit: "cover", borderRadius: "16px", 
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    filter: isDead ? "grayscale(100%) brightness(0.6)" : "none",
-                    transition: "filter 0.3s ease"
+                    border: "1px solid rgba(255,255,255,0.1)"
                   }} 
                 />
               ) : (
                 <div style={{ 
                   width: "100%", height: "100%", borderRadius: "16px", background: "rgba(255,255,255,0.05)", 
                   border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "2.5rem", fontWeight: "bold", color: "rgba(255,255,255,0.2)",
-                  filter: isDead ? "grayscale(100%) brightness(0.6)" : "none"
+                  fontSize: "2.5rem", fontWeight: "bold", color: "rgba(255,255,255,0.2)"
                 }}>
-                  {activeData.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-              
-              {isDead && (
-                <div style={{ 
-                  position: "absolute", top: 0, left: 0, right: 0, bottom: 0, 
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  background: "rgba(0,0,0,0.3)", borderRadius: "16px"
-                }}>
-                  <svg viewBox="0 0 24 24" width="70" height="70" fill="rgba(255,255,255,0.7)" xmlns="http://www.w3.org/2000/svg" style={{ dropShadow: "0px 2px 4px rgba(0,0,0,0.8)" }}>
-                    <path d="M12 2C7.58 2 4 5.58 4 10C4 12.04 4.77 13.9 6 15.3V20C6 21.1 6.9 22 8 22H16C17.1 22 18 21.1 18 20V15.3C19.23 13.9 20 12.04 20 10C20 5.58 16.42 2 12 2ZM9 11C7.9 11 7 10.1 7 9C7 7.9 7.9 7 9 7C10.1 7 11 7.9 11 9C11 10.1 10.1 11 9 11ZM15 11C13.9 11 13 10.1 13 9C13 7.9 13.9 7 15 7C16.1 7 17 7.9 17 9C17 10.1 16.1 11 15 11ZM14 18H10V15H14V18Z"/>
-                  </svg>
+                  {activeData.name ? activeData.name.charAt(0).toUpperCase() : '?'}
                 </div>
               )}
             </div>
@@ -147,14 +141,90 @@ export default function SummaryCardModal({ isOpen, onClose }: { isOpen: boolean;
             )}
 
             {isPlayer && (
-              <>
+              <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                 <div>
-                  <h4 style={{ fontSize: "0.75rem", fontWeight: 800, color: magentaColor, textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 10px 0" }}>Jogador</h4>
+                  <h4 style={{ fontSize: "0.75rem", fontWeight: 800, color: magentaColor, textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 10px 0" }}>Atributos e Estatísticas</h4>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
+                    {[
+                      { lbl: 'FOR', val: activeData.str }, { lbl: 'DES', val: activeData.dex }, { lbl: 'CON', val: activeData.con },
+                      { lbl: 'INT', val: activeData.int }, { lbl: 'SAB', val: activeData.wis }, { lbl: 'CAR', val: activeData.cha }
+                    ].map(attr => {
+                      const mod = Math.floor((parseInt((attr.val || 10).toString()) - 10) / 2);
+                      const modStr = mod >= 0 ? `+${mod}` : `${mod}`;
+                      return (
+                        <div key={attr.lbl} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "10px", textAlign: "center" }}>
+                          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 800 }}>{attr.lbl}</div>
+                          <div style={{ fontSize: "1.4rem", fontWeight: 900, color: "#fff", margin: "4px 0" }}>{attr.val || 10}</div>
+                          <div style={{ fontSize: "0.8rem", color: "var(--accent-primary)", fontWeight: 700 }}>{modStr}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "12px", textAlign: "center" }}>
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 800, textTransform: "uppercase" }}>Pontos de Vida</div>
+                    <div style={{ fontSize: "1.6rem", fontWeight: 900, color: "#10b981", marginTop: "4px" }}>{activeData.hpCurrent || 0} <span style={{ fontSize: "1rem", color: "var(--text-muted)" }}>/ {activeData.hpMax || 0}</span></div>
+                  </div>
+                  <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "8px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                      <div style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: 800, textTransform: "uppercase" }}>CA</div>
+                      <div style={{ fontSize: "1.2rem", fontWeight: 900, color: "#fff" }}>{activeData.ac || '--'}</div>
+                    </div>
+                    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "8px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                      <div style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: 800, textTransform: "uppercase" }}>Desloc</div>
+                      <div style={{ fontSize: "1.2rem", fontWeight: 900, color: "#fff" }}>{activeData.speed || '--'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: "20px", marginTop: "10px" }}>
+                  <div style={{ flex: 1, background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", padding: "16px" }}>
+                    <h4 style={{ fontSize: "0.75rem", fontWeight: 800, color: magentaColor, textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 10px 0" }}>Salvaguardas</h4>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                      {Array.isArray(activeData.saves) && activeData.saves.map((save: string, i: number) => (
+                        <span key={i} style={{ fontSize: "0.75rem", padding: "4px 8px", background: "rgba(255,255,255,0.05)", borderRadius: "4px", color: "#fff", fontWeight: 600 }}>{save}</span>
+                      ))}
+                      {(!Array.isArray(activeData.saves) || activeData.saves.length === 0) && <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Nenhuma</span>}
+                    </div>
+                  </div>
+
+                  <div style={{ flex: 2, background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", padding: "16px" }}>
+                    <h4 style={{ fontSize: "0.75rem", fontWeight: 800, color: magentaColor, textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 10px 0" }}>Perícias</h4>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                      {Array.isArray(activeData.skills) && activeData.skills.map((skill: string, i: number) => (
+                        <span key={i} style={{ fontSize: "0.75rem", padding: "4px 8px", background: "rgba(255,255,255,0.05)", borderRadius: "4px", color: "var(--accent-primary)", fontWeight: 600 }}>{skill}</span>
+                      ))}
+                      {(!Array.isArray(activeData.skills) || activeData.skills.length === 0) && <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Nenhuma</span>}
+                    </div>
+                  </div>
+                </div>
+
+                {activeData.attacks && activeData.attacks.length > 0 && (
+                  <div>
+                    <h4 style={{ fontSize: "0.75rem", fontWeight: 800, color: magentaColor, textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 10px 0" }}>Ataques Rápidos</h4>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {activeData.attacks.map((atk: any, idx: number) => (
+                        <div key={idx} style={{ display: "flex", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "6px", padding: "10px 14px", alignItems: "center" }}>
+                          <div style={{ fontWeight: 800, fontSize: "0.9rem", color: "#fff" }}>{atk.name || 'Ataque'}</div>
+                          <div style={{ display: "flex", gap: "15px", fontSize: "0.85rem" }}>
+                            <span style={{ color: "var(--accent-primary)", fontWeight: 700 }}>{atk.bonus || '--'}</span>
+                            <span style={{ color: "var(--text-muted)" }}>{atk.dmg || '--'}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                <div>
+                  <h4 style={{ fontSize: "0.75rem", fontWeight: 800, color: magentaColor, textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 10px 0" }}>Jogador(a)</h4>
                   <div style={{ background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", padding: "16px", color: "#cbd5e1", fontSize: "0.9rem", lineHeight: 1.5 }}>
                     {activeData.playerName || 'Não definido'}
                   </div>
                 </div>
-              </>
+              </div>
             )}
 
           </div>

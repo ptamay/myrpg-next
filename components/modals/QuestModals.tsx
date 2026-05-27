@@ -162,16 +162,29 @@ export function MainQuestModal({ isOpen, onClose }: QuestModalProps) {
 }
 
 export function MainQuestDetailModal({ isOpen, onClose }: QuestModalProps) {
+  const { activeData, setModals } = useAppContext();
+  
+  if (!activeData || !activeData.data) return null;
+  const { title, notes, day, phases } = activeData.data;
+
+  const handleEdit = () => {
+    setModals((prev: any) => ({ ...prev, mainQuestDetail: false, mainQuest: true }));
+  };
+
+  const doneCnt = phases ? phases.filter((ph: any) => ph.done).length : 0;
+  const total = phases ? phases.length : 0;
+  const allDone = total > 0 && doneCnt === total;
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} id="main-quest-detail-modal">
       <div className="modal-content modal-xl glass-panel">
         <header className="modal-header" style={{ background: "hsla(0,0%,0%,0.3)" }}>
           <div className="modal-title-group">
             <span className="modal-subtitle">Campanha — Quest Principal</span>
-            <h2 className="modal-title" style={{ fontSize: "1.5rem" }}>Detalhes da Quest</h2>
+            <h2 className="modal-title" style={{ fontSize: "1.5rem" }}>{title || 'Quest Sem Título'}</h2>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <button className="btn primary-btn small-btn" style={{ display: "flex", alignItems: "center", gap: "6px", padding: "0.4rem 0.9rem" }}>
+            <button onClick={handleEdit} className="btn primary-btn small-btn" style={{ display: "flex", alignItems: "center", gap: "6px", padding: "0.4rem 0.9rem" }}>
               Editar Quest
             </button>
             <button className="close-btn" onClick={onClose}>
@@ -184,13 +197,57 @@ export function MainQuestDetailModal({ isOpen, onClose }: QuestModalProps) {
         </header>
         <div className="modal-body custom-scrollbar" style={{ gap: "1.25rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
-            <span className="meta-tag" style={{ fontSize: "0.8rem", padding: "0.25rem 0.75rem" }}>Dia X</span>
-            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)" }}>Em Andamento</span>
+            <span className="meta-tag" style={{ fontSize: "0.8rem", padding: "0.25rem 0.75rem" }}>Criada no Dia {day || '?'}</span>
+            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: allDone ? "var(--success)" : "var(--text-secondary)" }}>
+              {allDone ? 'Concluída' : 'Em Andamento'}
+            </span>
           </div>
-          <div>
-            <p style={{ fontSize: "0.7rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: "0.75rem" }}>Fases da Quest</p>
+
+          {notes && (
+            <div style={{ marginTop: "1rem" }}>
+              <p style={{ fontSize: "0.95rem", lineHeight: 1.6, color: "var(--text-primary)", fontStyle: "italic", borderLeft: "3px solid var(--accent-primary)", paddingLeft: "1rem" }}>
+                "{notes}"
+              </p>
+            </div>
+          )}
+
+          <div style={{ marginTop: "1.5rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <p style={{ fontSize: "0.75rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", margin: 0 }}>Fases da Quest ({doneCnt}/{total})</p>
+            </div>
+            
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              {/* Phases */}
+              {phases && phases.length > 0 ? phases.map((ph: any, i: number) => (
+                <div key={i} className="glass-panel" style={{ padding: "1.25rem", borderLeft: ph.done ? "4px solid var(--success)" : "4px solid var(--accent-primary)", background: ph.done ? "rgba(16, 185, 129, 0.05)" : "rgba(255, 255, 255, 0.02)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
+                    <h5 style={{ fontSize: "1rem", fontWeight: 700, margin: 0, color: ph.done ? "var(--success)" : "#fff", textDecoration: ph.done ? "line-through" : "none" }}>{ph.description || `Fase ${i + 1}`}</h5>
+                    {ph.done && <span style={{ fontSize: "0.7rem", fontWeight: 800, color: "var(--success)", background: "rgba(16, 185, 129, 0.15)", padding: "2px 8px", borderRadius: "12px" }}>CONCLUÍDO</span>}
+                  </div>
+                  
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem", marginTop: "1rem" }}>
+                    {ph.action && (
+                      <div>
+                        <span style={{ fontSize: "0.65rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", display: "block" }}>Ação</span>
+                        <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{ph.action}</span>
+                      </div>
+                    )}
+                    {ph.coefficient && (
+                      <div>
+                        <span style={{ fontSize: "0.65rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", display: "block" }}>Coeficiente</span>
+                        <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{ph.coefficient}</span>
+                      </div>
+                    )}
+                    {ph.npcRole && (
+                      <div>
+                        <span style={{ fontSize: "0.65rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", display: "block" }}>NPCs/Facções</span>
+                        <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{ph.npcRole}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )) : (
+                <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontStyle: "italic" }}>Nenhuma fase registrada.</p>
+              )}
             </div>
           </div>
         </div>
@@ -344,16 +401,29 @@ export function SideQuestModal({ isOpen, onClose }: QuestModalProps) {
 }
 
 export function SideQuestDetailModal({ isOpen, onClose }: QuestModalProps) {
+  const { activeData, setModals } = useAppContext();
+  
+  if (!activeData || !activeData.data) return null;
+  const { title, desc, npc, day, tests } = activeData.data;
+
+  const handleEdit = () => {
+    setModals((prev: any) => ({ ...prev, sideQuestDetail: false, sideQuest: true }));
+  };
+
+  const doneCnt = tests ? tests.filter((t: any) => t.done).length : 0;
+  const total = tests ? tests.length : 0;
+  const allDone = total > 0 && doneCnt === total;
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} id="side-quest-detail-modal">
       <div className="modal-content modal-md glass-panel">
         <header className="modal-header" style={{ background: "hsla(0,0%,0%,0.3)" }}>
           <div className="modal-title-group">
             <span className="modal-subtitle">Mundo Aberto — Side Quest</span>
-            <h2 className="modal-title" style={{ fontSize: "1.4rem" }}>Detalhes da Missão</h2>
+            <h2 className="modal-title" style={{ fontSize: "1.4rem" }}>{title || 'Side Quest Sem Título'}</h2>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <button className="btn primary-btn small-btn" style={{ display: "flex", alignItems: "center", gap: "6px", padding: "0.4rem 0.9rem" }}>
+            <button onClick={handleEdit} className="btn primary-btn small-btn" style={{ display: "flex", alignItems: "center", gap: "6px", padding: "0.4rem 0.9rem" }}>
               Editar Missão
             </button>
             <button className="close-btn" onClick={onClose}>
@@ -365,7 +435,45 @@ export function SideQuestDetailModal({ isOpen, onClose }: QuestModalProps) {
           </div>
         </header>
         <div className="modal-body custom-scrollbar" style={{ gap: "1.25rem" }}>
-           {/* Side Quest Details Here */}
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+            <span className="meta-tag" style={{ fontSize: "0.75rem", padding: "0.2rem 0.6rem" }}>Dia {day || '?'}</span>
+            {npc && (
+              <span style={{ fontSize: "0.8rem", color: "var(--accent-secondary)", fontWeight: 700 }}>NPC/Recompensa: {npc}</span>
+            )}
+          </div>
+
+          {desc && (
+            <div style={{ marginBottom: "1.5rem" }}>
+              <p style={{ fontSize: "0.95rem", lineHeight: 1.6, color: "var(--text-primary)", fontStyle: "italic", borderLeft: "3px solid var(--warning)", paddingLeft: "1rem" }}>
+                "{desc}"
+              </p>
+            </div>
+          )}
+
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <p style={{ fontSize: "0.75rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", margin: 0 }}>Testes Relacionados ({doneCnt}/{total})</p>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              {tests && tests.length > 0 ? tests.map((t: any, i: number) => (
+                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem", background: "rgba(255,255,255,0.03)", padding: "1rem", borderRadius: "8px", border: t.done ? "1px solid var(--success)" : "1px solid rgba(255,255,255,0.05)" }}>
+                  <div style={{ marginTop: "2px" }}>
+                    {t.done ? (
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--success)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--text-muted)" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle></svg>
+                    )}
+                  </div>
+                  <span style={{ fontSize: "0.9rem", color: t.done ? "var(--text-secondary)" : "#fff", textDecoration: t.done ? "line-through" : "none", lineHeight: 1.4 }}>
+                    {t.description || `Teste ${i + 1}`}
+                  </span>
+                </div>
+              )) : (
+                <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontStyle: "italic" }}>Nenhum teste registrado.</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </Modal>
