@@ -1,0 +1,173 @@
+"use client";
+
+import { useAppContext } from "@/contexts/AppContext";
+import { blocosDeTempo } from "@/lib/gameData";
+import DashboardBlock from "./DashboardBlock";
+
+export default function DashboardView() {
+  const { diaAtual, setDiaAtual, indiceBlocoAtivo, setIndiceBlocoAtivo, jornadaPorDia, setModals, dadosGlobais, setActiveData } = useAppContext();
+
+  const handleExportLog = () => {
+    let rel = "RELATÓRIO DE CAMPANHA\n\n";
+    Object.keys(jornadaPorDia).sort((a, b) => Number(a) - Number(b)).forEach((d) => {
+      const dayNum = Number(d);
+      const day = jornadaPorDia[dayNum];
+      if (!day) return;
+      rel += `DIA ${dayNum}\n`;
+      blocosDeTempo.forEach((b, i) => {
+        const bData = day.blocos && day.blocos[i] ? day.blocos[i] : null;
+        if (!bData) return;
+        rel += `  [${b.nome}] - Clima: ${bData.weatherEffect || 'clear'}\n`;
+        if (bData.timeline && bData.timeline.length > 0) {
+          rel += `    EVENTOS GLOBAIS:\n`;
+          bData.timeline.forEach((t: any) => rel += `      - ${t.title || t}\n`);
+        }
+        if (bData.plots && bData.plots.length > 0) {
+          rel += `    OBJETIVOS GLOBAIS:\n`;
+          bData.plots.forEach((p: any) => rel += `      - ${p.text || p}\n`);
+        }
+        if (bData.sidequests && bData.sidequests.length > 0) {
+          rel += `    SIDE QUESTS (NPCs):\n`;
+          bData.sidequests.forEach((sq: any) => rel += `      - [${sq.npc || 'Sem NPC'}] ${sq.text}\n`);
+        }
+        if (bData.acoesPersonagens && bData.acoesPersonagens.length > 0) {
+          bData.acoesPersonagens.forEach((p: any) => {
+            if (p.acao) rel += `    ${p.concluido ? '[X]' : '[ ]'} ${p.nome}: ${p.acao}\n`;
+          });
+        }
+      });
+      rel += "\n";
+    });
+    const blob = new Blob([rel], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `Campanha_Relatorio_Dia_${diaAtual}.txt`;
+    a.click();
+  };
+
+  const handleResetCampaign = () => {
+    if (window.confirm("Apagar todos os dados da campanha e voltar ao Dia 1? Isso não pode ser desfeito.")) {
+      localStorage.removeItem("myrpg_dia_atual");
+      localStorage.removeItem("myrpg_bloco_ativo");
+      localStorage.removeItem("myrpg_dados_globais");
+      localStorage.removeItem("myrpg_jornada_por_dia");
+      window.location.reload();
+    }
+  };
+
+  const daysArray = Array.from({ length: Math.max(6, diaAtual) }, (_, i) => i + 1);
+
+  // Função para desenhar a navbar do dia/bloco
+  return (
+    <div id="view-dashboard" className="view active" style={{ display: "block" }}>
+      <div className="dash-ultra-wrapper">
+        <header className="dash-ultra-header glass-panel">
+          <div className="dash-day-control">
+            <span className="dash-label">JORNADA</span>
+            <div className="day-selector" id="day-selector">
+              {daysArray.map((d) => (
+                <button
+                  key={d}
+                  className={`day-btn ${d === diaAtual ? "active" : ""}`}
+                  onClick={() => setDiaAtual(d)}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="dash-stepper" id="moment-selector">
+            {blocosDeTempo.map((b, i) => (
+              <button
+                key={b.id}
+                className={`moment-btn ${i === indiceBlocoAtivo ? "active" : ""}`}
+                onClick={() => setIndiceBlocoAtivo(i)}
+              >
+                <span className="moment-dot"></span>
+                {b.nome}
+              </button>
+            ))}
+          </div>
+          <div className="dash-header-actions">
+            <button id="btn-pass-day" className="btn primary-btn" onClick={() => setModals((prev: any) => ({ ...prev, passDay: true }))}>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+              <span>Passar o Dia</span>
+            </button>
+            <button id="btn-save-day" className="btn secondary-btn" onClick={handleExportLog}>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Exportar Log</span>
+            </button>
+            <button id="btn-new-day" className="btn danger-btn" title="Resetar Campanha" onClick={handleResetCampaign}>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 6h18"></path>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <div className="dash-ultra-grid">
+          <main className="dash-main-content" id="blocks-grid">
+            <DashboardBlock />
+          </main>
+
+          <aside className="dash-side-panel glass-panel">
+            <div className="side-panel-header">
+              <h3>Status do Elenco</h3>
+              <div className="pulse-indicator"></div>
+            </div>
+            <div className="npc-status-group mt-3">
+              <h4 className="text-success">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>{" "}
+                Aliados & Vivos
+              </h4>
+              <ul id="display-npcs-alive" className="npc-status-list">
+                {dadosGlobais.players?.filter(p => !p.isDead).map(p => (
+                  <li key={p.id} onClick={() => { setActiveData(p); setModals((prev: any) => ({ ...prev, summaryCard: true })); }} style={{ cursor: "pointer", fontWeight: "bold", color: "var(--primary-color)" }}>
+                    {p.name} (PC)
+                  </li>
+                ))}
+                {dadosGlobais.npcs?.filter(n => !n.isDead && !n.isHidden).map(n => (
+                  <li key={n.id} onClick={() => { setActiveData(n); setModals((prev: any) => ({ ...prev, summaryCard: true })); }} style={{ cursor: "pointer" }}>
+                    {n.name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="npc-status-group mt-4">
+              <h4 className="text-danger">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                  <polyline points="2 17 12 22 22 17"></polyline>
+                  <polyline points="2 12 12 17 22 12"></polyline>
+                </svg>{" "}
+                Caídos / Mortos
+              </h4>
+              <ul id="display-npcs-dead" className="npc-status-list">
+                {dadosGlobais.players?.filter(p => p.isDead).map(p => (
+                  <li key={p.id} onClick={() => { setActiveData(p); setModals((prev: any) => ({ ...prev, summaryCard: true })); }} style={{ cursor: "pointer", fontWeight: "bold", color: "var(--primary-color)" }}>
+                    {p.name} (PC)
+                  </li>
+                ))}
+                {dadosGlobais.npcs?.filter(n => n.isDead && !n.isHidden).map(n => (
+                  <li key={n.id} onClick={() => { setActiveData(n); setModals((prev: any) => ({ ...prev, summaryCard: true })); }} style={{ cursor: "pointer" }}>
+                    {n.name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  );
+}
