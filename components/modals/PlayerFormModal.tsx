@@ -30,6 +30,9 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
   const [profBonusState, setProfBonusState] = useState<string>("2");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [isImporting, setIsImporting] = useState(false);
+  const importFileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (isOpen) {
       setAvatarBase64(activeData?.image || null);
@@ -66,6 +69,79 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
         setIsCropModalOpen(true);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImportImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const filesArray = Array.from(files).slice(0, 4);
+    setIsImporting(true);
+
+    try {
+      const base64Images = await Promise.all(filesArray.map(file => {
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => resolve(ev.target?.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }));
+
+      const res = await fetch("/api/import-player", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: base64Images })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Erro na importação.");
+      }
+
+      const data = await res.json();
+      
+      const form = document.querySelector("#player-form-modal form") as HTMLFormElement;
+      if (form) {
+        const setInputValue = (name: string, value: string | number | undefined) => {
+          if (value !== undefined && value !== null) {
+            const input = form.querySelector(`input[name="${name}"]`) as HTMLInputElement;
+            if (input) input.value = String(value);
+          }
+        };
+
+        setInputValue("name", data.name);
+        setInputValue("playerName", data.playerName);
+        setInputValue("classLevel", data.classLevel);
+        setInputValue("race", data.race);
+        setInputValue("str", data.str);
+        setInputValue("dex", data.dex);
+        setInputValue("con", data.con);
+        setInputValue("int", data.int);
+        setInputValue("wis", data.wis);
+        setInputValue("cha", data.cha);
+        setInputValue("hpMax", data.hpMax);
+        setInputValue("ac", data.ac);
+        setInputValue("init", data.init);
+        setInputValue("speed", data.speed);
+        setInputValue("perc", data.perc);
+        setInputValue("hdTotal", data.hdTotal);
+        
+        if (data.profBonus) setProfBonusState(data.profBonus);
+        if (data.saves && Array.isArray(data.saves)) setSelectedSaves(data.saves);
+        if (data.skills && Array.isArray(data.skills)) setSelectedSkills(data.skills);
+        if (data.attacks && Array.isArray(data.attacks)) {
+           setAttacksState(data.attacks.map((a: any) => ({ name: a.name || "", bonus: a.bonus || "", dmg: a.dmg || "" })));
+        }
+      }
+
+      alert("Ficha importada com sucesso! Verifique os dados e clique em Salvar.");
+    } catch (error: any) {
+      alert("Falha ao importar: " + error.message);
+    } finally {
+      setIsImporting(false);
+      if (importFileInputRef.current) importFileInputRef.current.value = "";
     }
   };
 
@@ -144,15 +220,21 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
             <h2 className="modal-title" id="player-form-title">Novo Jogador</h2>
           </div>
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            <input type="file" id="input-player-pdf" accept=".pdf" className="hidden" />
-            <button id="btn-trigger-player-pdf" className="btn secondary-btn small-btn">
-              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
-              </svg>
-              <span>Importar PDF</span>
+            <input type="file" id="input-player-pdf" accept="image/*" multiple className="hidden" ref={importFileInputRef} onChange={handleImportImages} style={{ display: "none" }} />
+            <button type="button" onClick={() => importFileInputRef.current?.click()} className="btn secondary-btn small-btn" disabled={isImporting}>
+              {isImporting ? (
+                <span>Carregando...</span>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                  </svg>
+                  <span>Importar Ficha (Imagens)</span>
+                </>
+              )}
             </button>
             <button id="btn-close-player-form" className="close-btn" onClick={onClose}>
               <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none">

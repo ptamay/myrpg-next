@@ -40,7 +40,22 @@ export default function DashboardBlock() {
 
   const updateWeather = (weather: string) => {
     const newJornada = JSON.parse(JSON.stringify(jornadaPorDia));
-    newJornada[diaAtual].blocos[indiceBlocoAtivo].weatherEffect = weather;
+    
+    // 1. Propagar para os blocos seguintes do dia atual
+    for (let i = indiceBlocoAtivo; i < newJornada[diaAtual].blocos.length; i++) {
+      newJornada[diaAtual].blocos[i].weatherEffect = weather;
+    }
+    
+    // 2. Propagar para todos os dias subsequentes que já estejam criados
+    const totalDays = Object.keys(newJornada).map(Number);
+    totalDays.forEach(day => {
+      if (day > diaAtual && newJornada[day]?.blocos) {
+        newJornada[day].blocos.forEach((b: any) => {
+          b.weatherEffect = weather;
+        });
+      }
+    });
+
     setJornadaPorDia(newJornada);
     setTimeout(salvarEstadoLocal, 100);
   };
@@ -295,7 +310,9 @@ export default function DashboardBlock() {
               }
 
               const totalTimeSpent = (pSession.acoes || []).reduce((sum: number, a: any) => {
-                 if (typeof a === 'object') return sum + (a.timeCost || 0);
+                 if (typeof a === 'object') {
+                   return a.concluida ? sum + (a.timeCost || 0) : sum;
+                 }
                  return sum + 60;
               }, 0);
               const remainingTime = 240 - totalTimeSpent;

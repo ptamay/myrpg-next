@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 
 export default function FoodView() {
-  const { dadosGlobais, setDadosGlobais } = useAppContext();
+  const { dadosGlobais, setDadosGlobais, salvarEstadoLocal } = useAppContext();
   const [activeTab, setActiveTab] = useState("food-panel");
 
   const [adjustType, setAdjustType] = useState<"water"|"food"|"both">("water");
@@ -31,10 +31,13 @@ export default function FoodView() {
        if (adjustType === "both" || adjustType === "food") {
           newFood = adjustOperation === "add" ? newFood + amount : Math.max(0, newFood - amount);
        }
+       setSetWater(newWater);
+       setSetFood(newFood);
        return { ...prev, food: { ...prev.food, water: newWater, food: newFood } };
     });
     setAdjustAmount("");
     setAdjustReason("");
+    setTimeout(salvarEstadoLocal, 100);
   };
 
   const handleSetBoth = () => {
@@ -46,17 +49,34 @@ export default function FoodView() {
         food: setFood === "" ? (prev.food?.food || 0) : Number(setFood)
       }
     }));
+    setTimeout(salvarEstadoLocal, 100);
   };
 
   const handleSetPeople = () => {
-    setDadosGlobais((prev: any) => ({
-      ...prev,
-      food: {
-        ...prev.food,
-        people: Number(peopleAmount),
-        consumptionRate: Number(consumptionRate)
-      }
-    }));
+    const waterNeeds = Number(peopleAmount) * Number(consumptionRate);
+    const foodNeeds = Number(peopleAmount) * Number(consumptionRate);
+    
+    setDadosGlobais((prev: any) => {
+      const currentWater = prev.food?.water || 0;
+      const currentFood = prev.food?.food || 0;
+      const nextWater = Math.max(0, currentWater - waterNeeds);
+      const nextFood = Math.max(0, currentFood - foodNeeds);
+
+      setSetWater(nextWater);
+      setSetFood(nextFood);
+
+      return {
+        ...prev,
+        food: {
+          ...prev.food,
+          people: Number(peopleAmount),
+          consumptionRate: Number(consumptionRate),
+          water: nextWater,
+          food: nextFood
+        }
+      };
+    });
+    setTimeout(salvarEstadoLocal, 100);
   };
 
   const activePeople = dadosGlobais.food?.people || 0;

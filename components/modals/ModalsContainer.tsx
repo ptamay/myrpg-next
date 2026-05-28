@@ -15,21 +15,20 @@ import SessionPlayerModal from "./SessionPlayerModal";
 import PlayerDetailModal from "./PlayerDetailModal";
 
 export default function ModalsContainer() {
-  const { modals, setModals, activeData, diaAtual, jornadaPorDia } = useAppContext();
+  const { modals, setModals, activeData, diaAtual, jornadaPorDia, indiceBlocoAtivo } = useAppContext();
 
   const close = (key: keyof typeof modals) => {
     setModals((prev: any) => ({ ...prev, [key]: false }));
   };
 
-  const dayData = jornadaPorDia && jornadaPorDia[diaAtual];
-  const faseAtual = dayData ? dayData.fase : 'Manhã';
-
   const getFaseGradient = () => {
-    switch(faseAtual) {
-       case 'Manhã': return 'linear-gradient(to bottom, rgba(253, 224, 71, 0.07), #09090b 40%)';
-       case 'Tarde': return 'linear-gradient(to bottom, rgba(249, 115, 22, 0.07), #09090b 40%)';
-       case 'Noite': return 'linear-gradient(to bottom, rgba(59, 130, 246, 0.07), #09090b 40%)';
-       case 'Madrugada': return 'linear-gradient(to bottom, rgba(16, 185, 129, 0.05), #09090b 40%)';
+    switch(indiceBlocoAtivo) {
+       case 0: return 'linear-gradient(to bottom, rgba(245, 225, 164, 0.07), #09090b 40%)';
+       case 1: return 'linear-gradient(to bottom, rgba(255, 195, 0, 0.07), #09090b 40%)';
+       case 2: return 'linear-gradient(to bottom, rgba(191, 107, 44, 0.07), #09090b 40%)';
+       case 3: return 'linear-gradient(to bottom, rgba(204, 51, 255, 0.07), #09090b 40%)';
+       case 4: return 'linear-gradient(to bottom, rgba(0, 102, 204, 0.07), #09090b 40%)';
+       case 5: return 'linear-gradient(to bottom, rgba(153, 102, 255, 0.07), #09090b 40%)';
        default: return '#09090b';
     }
   };

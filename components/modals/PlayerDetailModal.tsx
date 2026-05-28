@@ -19,9 +19,6 @@ export default function PlayerDetailModal({ isOpen, onClose, player }: { isOpen:
   };
 
   const hpPct = player.hpMax > 0 ? Math.max(0, Math.min(100, ((player.hpCurrent || 0) / player.hpMax) * 100)) : 0;
-  let hpColorClass = "#10b981";
-  if (hpPct <= 25) hpColorClass = "#ef4444";
-  else if (hpPct <= 50) hpColorClass = "#f59e0b";
 
   const calcMod = (val: number | string) => {
     const m = Math.floor((parseInt((val || 10).toString()) - 10) / 2);
@@ -54,7 +51,7 @@ export default function PlayerDetailModal({ isOpen, onClose, player }: { isOpen:
         
         <header style={{ padding: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(0,0,0,0.2)" }}>
           <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
-            <div style={{ width: "80px", height: "80px", borderRadius: "50%", overflow: "hidden", border: `3px solid ${hpColorClass}`, background: "rgba(255,255,255,0.05)" }}>
+            <div style={{ width: "80px", height: "80px", borderRadius: "50%", overflow: "hidden", border: `2px solid rgba(255,255,255,0.15)`, background: "rgba(255,255,255,0.05)" }}>
               {player.image ? (
                 <img src={player.image} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover", filter: isDead ? "grayscale(100%)" : "none" }} />
               ) : (
@@ -68,7 +65,7 @@ export default function PlayerDetailModal({ isOpen, onClose, player }: { isOpen:
                 <h2 style={{ fontSize: "1.8rem", fontWeight: 900, color: "#fff", margin: 0, letterSpacing: "-0.02em" }}>{player.name}</h2>
                 {player.inspiration && <span title="Inspiração" style={{ fontSize: "1.2rem" }}>🌟</span>}
               </div>
-              <div style={{ fontSize: "1rem", color: "#8b5cf6", fontWeight: 700, marginTop: "4px" }}>
+              <div style={{ fontSize: "1rem", color: "var(--accent-primary)", fontWeight: 700, marginTop: "4px" }}>
                 {player.classLevel || 'Sem classe'} <span style={{ color: "var(--text-muted)", fontWeight: "normal" }}>•</span> {player.race || 'Sem raça'}
               </div>
               {player.playerName && (
@@ -87,13 +84,13 @@ export default function PlayerDetailModal({ isOpen, onClose, player }: { isOpen:
             </button>
           </div>
         </header>
-
+ 
         <div style={{ display: "flex", padding: "0 24px", borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(0,0,0,0.1)" }}>
-          <button onClick={() => setActiveTab("stats")} style={{ padding: "12px 20px", background: "transparent", border: "none", color: activeTab === "stats" ? "#fff" : "var(--text-muted)", borderBottom: activeTab === "stats" ? "2px solid #8b5cf6" : "2px solid transparent", fontWeight: 700, cursor: "pointer" }}>Atributos & Status</button>
-          <button onClick={() => setActiveTab("combat")} style={{ padding: "12px 20px", background: "transparent", border: "none", color: activeTab === "combat" ? "#fff" : "var(--text-muted)", borderBottom: activeTab === "combat" ? "2px solid #8b5cf6" : "2px solid transparent", fontWeight: 700, cursor: "pointer" }}>Combate & Magias</button>
-          <button onClick={() => setActiveTab("bio")} style={{ padding: "12px 20px", background: "transparent", border: "none", color: activeTab === "bio" ? "#fff" : "var(--text-muted)", borderBottom: activeTab === "bio" ? "2px solid #8b5cf6" : "2px solid transparent", fontWeight: 700, cursor: "pointer" }}>Inventário & Bio</button>
+          <button onClick={() => setActiveTab("stats")} style={{ padding: "12px 20px", background: "transparent", border: "none", color: activeTab === "stats" ? "#fff" : "var(--text-muted)", borderBottom: activeTab === "stats" ? "2px solid var(--accent-primary)" : "2px solid transparent", fontWeight: 700, cursor: "pointer" }}>Atributos & Status</button>
+          <button onClick={() => setActiveTab("combat")} style={{ padding: "12px 20px", background: "transparent", border: "none", color: activeTab === "combat" ? "#fff" : "var(--text-muted)", borderBottom: activeTab === "combat" ? "2px solid var(--accent-primary)" : "2px solid transparent", fontWeight: 700, cursor: "pointer" }}>Combate & Magias</button>
+          <button onClick={() => setActiveTab("bio")} style={{ padding: "12px 20px", background: "transparent", border: "none", color: activeTab === "bio" ? "#fff" : "var(--text-muted)", borderBottom: activeTab === "bio" ? "2px solid var(--accent-primary)" : "2px solid transparent", fontWeight: 700, cursor: "pointer" }}>Inventário & Bio</button>
         </div>
-
+ 
         <div style={{ padding: "24px", overflowY: "auto", flex: 1 }}>
           {activeTab === "stats" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -107,29 +104,29 @@ export default function PlayerDetailModal({ isOpen, onClose, player }: { isOpen:
                   </div>
                 ))}
               </div>
-
+ 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
-                <div style={{ background: "rgba(239, 68, 68, 0.05)", border: `1px solid rgba(239, 68, 68, 0.2)`, borderRadius: "8px", padding: "16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: "0.8rem", color: "#fca5a5", fontWeight: 700, textTransform: "uppercase" }}>Pontos de Vida</span>
-                  <div style={{ fontSize: "2rem", fontWeight: 900, color: hpColorClass, margin: "4px 0" }}>
+                <div style={{ background: "rgba(255, 255, 255, 0.02)", border: `1px solid rgba(255, 255, 255, 0.05)`, borderRadius: "8px", padding: "16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase" }}>Pontos de Vida</span>
+                  <div style={{ fontSize: "2rem", fontWeight: 900, color: "#fff", margin: "4px 0" }}>
                     {player.hpCurrent || 0} <span style={{ fontSize: "1rem", color: "var(--text-muted)" }}>/ {player.hpMax || 0}</span>
                   </div>
                 </div>
                 
-                <div style={{ background: "rgba(16, 185, 129, 0.05)", border: `1px solid rgba(16, 185, 129, 0.2)`, borderRadius: "8px", padding: "16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: "0.8rem", color: "#a7f3d0", fontWeight: 700, textTransform: "uppercase" }}>Classe de Armadura</span>
-                  <div style={{ fontSize: "2rem", fontWeight: 900, color: "#34d399", margin: "4px 0" }}>
+                <div style={{ background: "rgba(255, 255, 255, 0.02)", border: `1px solid rgba(255, 255, 255, 0.05)`, borderRadius: "8px", padding: "16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase" }}>Classe de Armadura</span>
+                  <div style={{ fontSize: "2rem", fontWeight: 900, color: "#fff", margin: "4px 0" }}>
                     {player.ac || 10}
                   </div>
                 </div>
-
-                <div style={{ background: "rgba(139, 92, 246, 0.05)", border: `1px solid rgba(139, 92, 246, 0.2)`, borderRadius: "8px", padding: "16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: "0.8rem", color: "#c4b5fd", fontWeight: 700, textTransform: "uppercase" }}>Proficiência</span>
-                  <div style={{ fontSize: "2rem", fontWeight: 900, color: "#a78bfa", margin: "4px 0" }}>
+ 
+                <div style={{ background: "rgba(255, 255, 255, 0.02)", border: `1px solid rgba(255, 255, 255, 0.05)`, borderRadius: "8px", padding: "16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase" }}>Proficiência</span>
+                  <div style={{ fontSize: "2rem", fontWeight: 900, color: "#fff", margin: "4px 0" }}>
                     +{player.profBonus || 2}
                   </div>
                 </div>
-
+ 
                 <div style={{ background: "rgba(255, 255, 255, 0.02)", border: `1px solid rgba(255, 255, 255, 0.05)`, borderRadius: "8px", padding: "16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                   <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase" }}>Deslocamento</span>
                   <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#fff", margin: "4px 0", textAlign: "center" }}>
@@ -143,7 +140,7 @@ export default function PlayerDetailModal({ isOpen, onClose, player }: { isOpen:
                   <h3 style={{ fontSize: "1rem", color: "#fff", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "8px", marginBottom: "12px" }}>Salvaguardas</h3>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                     {Array.isArray(player.saves) && player.saves.length > 0 ? player.saves.map((s: string) => (
-                       <span key={s} style={{ background: "rgba(139, 92, 246, 0.15)", color: "#c4b5fd", padding: "4px 10px", borderRadius: "12px", fontSize: "0.8rem", fontWeight: "bold", border: "1px solid rgba(139, 92, 246, 0.3)" }}>{s}</span>
+                       <span key={s} style={{ background: "rgba(255, 255, 255, 0.05)", color: "#e2e8f0", padding: "4px 10px", borderRadius: "12px", fontSize: "0.8rem", fontWeight: "bold", border: "1px solid rgba(255, 255, 255, 0.08)" }}>{s}</span>
                     )) : <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Nenhuma salvaguarda selecionada.</span>}
                   </div>
                 </div>
@@ -151,7 +148,7 @@ export default function PlayerDetailModal({ isOpen, onClose, player }: { isOpen:
                   <h3 style={{ fontSize: "1rem", color: "#fff", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "8px", marginBottom: "12px" }}>Perícias</h3>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                     {Array.isArray(player.skills) && player.skills.length > 0 ? player.skills.map((s: string) => (
-                       <span key={s} style={{ background: "rgba(16, 185, 129, 0.15)", color: "#6ee7b7", padding: "4px 10px", borderRadius: "12px", fontSize: "0.8rem", fontWeight: "bold", border: "1px solid rgba(16, 185, 129, 0.3)" }}>{s}</span>
+                       <span key={s} style={{ background: "rgba(255, 255, 255, 0.05)", color: "#e2e8f0", padding: "4px 10px", borderRadius: "12px", fontSize: "0.8rem", fontWeight: "bold", border: "1px solid rgba(255, 255, 255, 0.08)" }}>{s}</span>
                     )) : <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Nenhuma perícia selecionada.</span>}
                   </div>
                 </div>
@@ -164,7 +161,23 @@ export default function PlayerDetailModal({ isOpen, onClose, player }: { isOpen:
               <div>
                 <h3 style={{ fontSize: "1.1rem", color: "#fff", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "8px", marginBottom: "12px" }}>Ataques e Habilidades</h3>
                 <div style={{ whiteSpace: "pre-wrap", color: "var(--text-secondary)", fontSize: "0.95rem", lineHeight: 1.5, background: "rgba(0,0,0,0.2)", padding: "16px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.05)" }}>
-                  {player.attacks || "Nenhum ataque ou habilidade cadastrada."}
+                  {Array.isArray(player.attacks) ? (
+                    player.attacks.length > 0 ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                        {player.attacks.map((atk: any, idx: number) => (
+                          <div key={idx} style={{ display: "flex", justifyContent: "space-between", background: "rgba(255,255,255,0.05)", borderRadius: "6px", padding: "8px 12px", alignItems: "center" }}>
+                            <div style={{ fontWeight: 800, fontSize: "0.9rem", color: "#fff" }}>{atk.name || 'Ataque'}</div>
+                            <div style={{ display: "flex", gap: "15px", fontSize: "0.85rem" }}>
+                              <span style={{ color: "var(--accent-primary)", fontWeight: 700 }}>{atk.bonus || '--'}</span>
+                              <span style={{ color: "var(--text-muted)" }}>{atk.dmg || '--'}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : "Nenhum ataque ou habilidade cadastrada."
+                  ) : (
+                    player.attacks || "Nenhum ataque ou habilidade cadastrada."
+                  )}
                 </div>
               </div>
             </div>

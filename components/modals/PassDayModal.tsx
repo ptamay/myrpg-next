@@ -60,15 +60,25 @@ export default function PassDayModal({ isOpen, onClose }: PassDayModalProps) {
     setDiaAtual(nextDay);
     setIndiceBlocoAtivo(0);
 
-    // Garantir que a jornada existe para o novo dia (caso seja além do dia 6)
-    if (!jornadaPorDia[nextDay]) {
-      const { getInitialJornada } = require("@/lib/dataHelpers");
-      const initial = getInitialJornada();
-      setJornadaPorDia((prev) => ({
-        ...prev,
-        [nextDay]: initial[1] // Usa o dia 1 como template
-      }));
-    }
+    // Garantir que a jornada existe para o novo dia
+    const lastBlockWeather = jornadaPorDia[diaAtual]?.blocos?.[5]?.weatherEffect || "clear";
+
+    setJornadaPorDia((prev) => {
+      const updated = { ...prev };
+      if (!updated[nextDay]) {
+        const { getInitialJornada } = require("@/lib/dataHelpers");
+        const initial = getInitialJornada();
+        updated[nextDay] = initial[1]; // Usa o dia 1 como template
+      }
+      
+      // Propagar o clima do dia anterior para todos os blocos do novo dia
+      if (updated[nextDay] && updated[nextDay].blocos) {
+        updated[nextDay].blocos.forEach((b: any) => {
+          b.weatherEffect = lastBlockWeather;
+        });
+      }
+      return updated;
+    });
 
     setTimeout(salvarEstadoLocal, 100);
     onClose();

@@ -40,6 +40,7 @@ interface PlayerCardProps {
 export default function PlayerCard({ player }: PlayerCardProps) {
   const { dadosGlobais, setDadosGlobais, setModals, setActiveData, salvarEstadoLocal } = useAppContext();
   const [skillsExpanded, setSkillsExpanded] = useState(false);
+  const [attacksExpanded, setAttacksExpanded] = useState(false);
 
   const calcMod = (val: number | string) => {
     const m = Math.floor((parseInt((val || 10).toString()) - 10) / 2);
@@ -158,18 +159,24 @@ export default function PlayerCard({ player }: PlayerCardProps) {
         </div>
 
         {player.attacks && player.attacks.length > 0 && (
-          <div className="player-attacks-container mt-3">
-            <div className="player-attacks-title" style={{ fontSize: "0.75rem", fontWeight: 800, color: "var(--text-muted)", marginBottom: "0.5rem" }}>Ataques e Conjurações</div>
-            <div className="player-attacks-list" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              {player.attacks.map((a: any, i: number) => (
-                <div key={i} className="player-atk-row" style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", padding: "4px 8px", background: "rgba(255,255,255,0.05)", borderRadius: "4px" }}>
-                  <span className="atk-name" style={{ fontWeight: 600 }}>{a.name}</span>
-                  <span className="atk-bonus" style={{ color: "var(--accent-primary)" }}>{a.bonus || '--'}</span>
-                  <span className="atk-dmg">{a.dmg || '--'}</span>
-                </div>
-              ))}
+          <>
+            <div className={`player-skills-trigger ${attacksExpanded ? "active" : ""}`} onClick={(e) => { e.stopPropagation(); setAttacksExpanded(!attacksExpanded); }}>
+              <span>Ataques e Conjurações</span>
+              <svg className="chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: attacksExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}><polyline points="6 9 12 15 18 9"></polyline></svg>
             </div>
-          </div>
+            
+            <div className={`player-skills-collapse ${attacksExpanded ? "active" : ""}`} onClick={(e) => e.stopPropagation()} style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "8px", padding: attacksExpanded ? "12px" : "0 12px" }}>
+              <div className="player-attacks-list" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                {player.attacks.map((a: any, i: number) => (
+                  <div key={i} className="player-atk-row" style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", padding: "6px 10px", background: "rgba(255,255,255,0.03)", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.02)" }}>
+                    <span className="atk-name" style={{ fontWeight: 700, color: "#fff" }}>{a.name}</span>
+                    <span className="atk-bonus" style={{ color: "var(--accent-primary)", fontWeight: 700 }}>{a.bonus || '--'}</span>
+                    <span className="atk-dmg" style={{ color: "var(--text-secondary)" }}>{a.dmg || '--'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
         )}
 
         <div className={`player-skills-trigger ${skillsExpanded ? "active" : ""}`} onClick={(e) => { e.stopPropagation(); setSkillsExpanded(!skillsExpanded); }}>

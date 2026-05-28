@@ -12,7 +12,7 @@ export default function SummaryCardModal({ isOpen, onClose }: { isOpen: boolean;
   const isPlayer = !!activeData.playerName;
   const isDead = activeData.isDead;
   
-  const magentaColor = "#d946ef";
+  const magentaColor = "var(--accent-primary)";
   const badgeGreen = { background: "rgba(16, 185, 129, 0.15)", color: "#10b981", border: "1px solid rgba(16, 185, 129, 0.3)" };
   const badgeRed = { background: "rgba(239, 68, 68, 0.15)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.3)" };
   const badgeRedSolid = { background: "#ef4444", color: "#ffffff", border: "1px solid #ef4444" };
@@ -25,7 +25,7 @@ export default function SummaryCardModal({ isOpen, onClose }: { isOpen: boolean;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} id="summary-card-modal">
-      <div className={`modal-content ${isDead ? "dead-modal-content" : ""}`} style={{ maxWidth: isPlayer ? "800px" : "480px", width: "100%", background: "#09090b", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", padding: 0, overflow: "hidden" }}>
+      <div className={`modal-content ${isDead ? "dead-modal-content" : ""}`} style={{ maxWidth: isPlayer ? "800px" : "480px", width: "100%", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", padding: 0, overflow: "hidden" }}>
         {isDead && (
           <div className="modal-skull-overlay">
             <svg viewBox="0 0 24 24" width="60%" height="60%" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
