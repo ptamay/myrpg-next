@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AppProvider } from "@/contexts/AppContext";
+import { SystemDialogProvider } from "@/contexts/SystemDialogContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -35,7 +36,9 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           <AppProvider>
-            {children}
+            <SystemDialogProvider>
+              {children}
+            </SystemDialogProvider>
           </AppProvider>
         </AuthProvider>
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}

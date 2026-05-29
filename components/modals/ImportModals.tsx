@@ -3,6 +3,7 @@
 import React from "react";
 import Modal from "../ui/Modal";
 import { useAppContext } from "@/contexts/AppContext";
+import { useSystemDialog } from "@/contexts/SystemDialogContext";
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -10,6 +11,18 @@ interface ImportModalProps {
 }
 
 export function NpcImportTextModal({ isOpen, onClose }: ImportModalProps) {
+  const { showAlert } = useSystemDialog();
+  const templateStr = `Nome: \nTítulo/Ocupação: \nFacção (ally/neutral/enemy): \nRaça: \nAlinhamento: \nND: \nPV Máx: \nCA: \nDeslocamento: \nIniciativa: \nPercepção: \nFOR: 10\nDES: 10\nCON: 10\nINT: 10\nSAB: 10\nCAR: 10\nAtaque Principal: \nResistências: \nImunidades: \nAções (Livre): \nMotivações: \nSegredos: \nTraços: \nItens Visíveis: \nItens Ocultos: \nNotas Extras: \nMagias Diárias: 1º[0] 2º[0] 3º[0] 4º[0] 5º[0] 6º[0] 7º[0] 8º[0] 9º[0]`;
+
+  const handleCopyTemplate = async () => {
+    try {
+      await navigator.clipboard.writeText(templateStr);
+      showAlert({ title: "Copiado", message: "Template copiado para a área de transferência.", type: "success" });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} id="npc-import-text-modal">
       <div className="modal-content glass-panel" style={{ maxWidth: "600px" }}>
@@ -18,6 +31,12 @@ export function NpcImportTextModal({ isOpen, onClose }: ImportModalProps) {
             <span className="modal-subtitle">Automação</span>
             <h2 className="modal-title">Colar Estrutura de Texto</h2>
           </div>
+          <button className="btn secondary-btn small-btn" onClick={handleCopyTemplate}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: "6px" }}>
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            Copiar Template
+          </button>
         </header>
         <div className="modal-body">
           <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: "1rem" }}>
@@ -26,7 +45,7 @@ export function NpcImportTextModal({ isOpen, onClose }: ImportModalProps) {
           <textarea 
             className="journey-input form-textarea" 
             style={{ minHeight: "300px", fontSize: "0.85rem" }} 
-            placeholder="Informações Básicas&#10;Nome: Exemplo..."
+            placeholder="Cole aqui a ficha do NPC..."
           ></textarea>
         </div>
         <footer className="modal-footer">

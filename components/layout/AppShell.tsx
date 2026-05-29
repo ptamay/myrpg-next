@@ -8,6 +8,7 @@ import SettingsView from "../views/SettingsView";
 import FoodView from "../views/FoodView";
 import PlayersView from "../views/PlayersView";
 import MapsView from "../views/MapsView";
+import CronicasView from "../views/CronicasView";
 import BackgroundEffects from "./BackgroundEffects";
 import ModalsContainer from "../modals/ModalsContainer";
 import { useAppContext } from "@/contexts/AppContext";
@@ -67,6 +68,9 @@ export default function AppShell() {
           </div>
           <div style={{ display: activeView === "view-maps" ? "block" : "none", height: "100%" }}>
             <MapsView />
+          </div>
+          <div style={{ display: activeView === "view-cronicas" ? "block" : "none", height: "100%" }}>
+            <CronicasView />
           </div>
         </div>
         <ModalsContainer />

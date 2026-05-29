@@ -33,7 +33,19 @@ export default function FoodView() {
        }
        setSetWater(newWater);
        setSetFood(newFood);
-       return { ...prev, food: { ...prev.food, water: newWater, food: newFood } };
+       
+       const newHistoryEntry = {
+         id: Date.now(),
+         date: new Date().toISOString(),
+         type: adjustType,
+         operation: adjustOperation,
+         amount: amount,
+         reason: adjustReason || "Ajuste manual",
+         // TODO: Integrar com Supabase (tabela food_history)
+       };
+       const newHistory = [newHistoryEntry, ...(prev.food?.history || [])];
+
+       return { ...prev, food: { ...prev.food, water: newWater, food: newFood, history: newHistory } };
     });
     setAdjustAmount("");
     setAdjustReason("");
@@ -130,7 +142,7 @@ export default function FoodView() {
               <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end", marginTop: "0.25rem" }}>
                 <div className="form-group" style={{ flex: 1, margin: 0 }}>
                   <label style={{ fontSize: "0.75rem", marginBottom: "4px", display: "block", color: "var(--text-secondary)", fontWeight: 600 }}>Nº de Pessoas</label>
-                  <input type="number" className="journey-input modern-input" min="0" value={peopleAmount} onChange={(e) => setPeopleAmount(Number(e.target.value))} style={{ width: "100%", height: "42px", padding: "0 12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.3)", color: "#fff", fontWeight: "bold", fontSize: "1rem" }} />
+                  <input type="number" className="journey-input modern-input" min="0" value={peopleAmount} onFocus={(e) => e.target.select()} onKeyDown={(e) => { if (e.key === 'Enter') handleSetPeople(); }} onChange={(e) => setPeopleAmount(Number(e.target.value))} style={{ width: "100%", height: "42px", padding: "0 12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.3)", color: "#fff", fontWeight: "bold", fontSize: "1rem" }} />
                 </div>
                 <div className="form-group" style={{ flex: 1.5, margin: 0 }}>
                   <label style={{ fontSize: "0.75rem", marginBottom: "4px", display: "block", color: "var(--text-secondary)", fontWeight: 600 }}>Modificador</label>
@@ -154,13 +166,13 @@ export default function FoodView() {
               </h3>
               <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem", margin: 0 }}>Defina os valores absolutos dos suprimentos.</p>
               <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", alignItems: "center" }}>
-                <div className="form-group" style={{ flex: 1, margin: 0, display: "flex", alignItems: "center", background: "rgba(0,0,0,0.3)", borderRadius: "8px", padding: "0 12px", border: "1px solid rgba(255,255,255,0.1)" }}>
+                <div className="supply-input-wrapper">
                   <span style={{ fontSize: "1.1rem" }}>💧</span>
-                  <input type="number" className="journey-input modern-input" min="0" placeholder="Água" value={setWater} onChange={(e) => setSetWater(e.target.value ? Number(e.target.value) : "")} style={{ width: "100%", height: "42px", padding: "0 8px", fontSize: "1rem", textAlign: "center", border: "none", background: "transparent", color: "#fff", fontWeight: "bold" }} />
+                  <input type="number" className="supply-input-field" min="0" placeholder="Água" value={setWater} onFocus={(e) => e.target.select()} onKeyDown={(e) => { if (e.key === 'Enter') handleSetBoth(); }} onChange={(e) => setSetWater(e.target.value ? Number(e.target.value) : "")} />
                 </div>
-                <div className="form-group" style={{ flex: 1, margin: 0, display: "flex", alignItems: "center", background: "rgba(0,0,0,0.3)", borderRadius: "8px", padding: "0 12px", border: "1px solid rgba(255,255,255,0.1)" }}>
+                <div className="supply-input-wrapper">
                   <span style={{ fontSize: "1.1rem" }}>🍖</span>
-                  <input type="number" className="journey-input modern-input" min="0" placeholder="Comida" value={setFood} onChange={(e) => setSetFood(e.target.value ? Number(e.target.value) : "")} style={{ width: "100%", height: "42px", padding: "0 8px", fontSize: "1rem", textAlign: "center", border: "none", background: "transparent", color: "#fff", fontWeight: "bold" }} />
+                  <input type="number" className="supply-input-field" min="0" placeholder="Comida" value={setFood} onFocus={(e) => e.target.select()} onKeyDown={(e) => { if (e.key === 'Enter') handleSetBoth(); }} onChange={(e) => setSetFood(e.target.value ? Number(e.target.value) : "")} />
                 </div>
                 <button className="btn" onClick={handleSetBoth} style={{ flex: 0.8, height: "42px", fontSize: "0.85rem", background: "#8b5cf6", color: "#fff", fontWeight: 700, borderRadius: "8px" }}>Salvar</button>
               </div>
@@ -186,12 +198,12 @@ export default function FoodView() {
                   </select>
                 </div>
                 <div className="form-group" style={{ flex: 1, margin: 0 }}>
-                  <input type="number" className="journey-input modern-input" min="0" placeholder="Qtd" value={adjustAmount} onChange={(e) => setAdjustAmount(e.target.value ? Number(e.target.value) : "")} style={{ width: "100%", height: "42px", padding: "0 12px", fontSize: "1rem", textAlign: "center", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.3)", color: "#fff", fontWeight: "bold" }} />
+                  <input type="number" className="journey-input modern-input" min="0" placeholder="Qtd" value={adjustAmount} onFocus={(e) => e.target.select()} onKeyDown={(e) => { if (e.key === 'Enter') document.getElementById('adjustReasonInput')?.focus(); }} onChange={(e) => setAdjustAmount(e.target.value ? Number(e.target.value) : "")} style={{ width: "100%", height: "42px", padding: "0 12px", fontSize: "1rem", textAlign: "center", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.3)", color: "#fff", fontWeight: "bold" }} />
                 </div>
               </div>
               <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.25rem" }}>
                 <div className="form-group" style={{ flex: 1, margin: 0 }}>
-                  <input type="text" className="journey-input modern-input" placeholder="Detalhes (Opcional. Ex: dado rolado...)" value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)} style={{ width: "100%", height: "42px", padding: "0 12px", fontSize: "0.9rem", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.3)", color: "#fff" }} />
+                  <input type="text" id="adjustReasonInput" className="journey-input modern-input" placeholder="Detalhes (Opcional. Ex: dado rolado...)" value={adjustReason} onFocus={(e) => e.target.select()} onKeyDown={(e) => { if (e.key === 'Enter') handleAdjustConfirm(); }} onChange={(e) => setAdjustReason(e.target.value)} style={{ width: "100%", height: "42px", padding: "0 12px", fontSize: "0.9rem", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(0,0,0,0.3)", color: "#fff" }} />
                 </div>
                 <button className={`btn ${adjustOperation === "add" ? "success-btn" : "danger-btn"}`} onClick={handleAdjustConfirm} style={{ height: "42px", padding: "0 1.5rem", borderRadius: "8px", fontWeight: 800, fontSize: "0.85rem" }}>
                   Confirmar
@@ -263,7 +275,25 @@ export default function FoodView() {
                 </tr>
               </thead>
               <tbody>
-                {/* Historico aqui */}
+                {dadosGlobais.food?.history?.map((entry: any) => (
+                  <tr key={entry.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                    <td style={{ padding: "0.8rem", fontSize: "0.85rem", color: "var(--text-muted)" }}>{new Date(entry.date).toLocaleDateString()}</td>
+                    <td style={{ padding: "0.8rem", fontSize: "0.85rem", color: "var(--text-secondary)" }}>{new Date(entry.date).toLocaleTimeString()}</td>
+                    <td style={{ padding: "0.8rem", fontSize: "0.85rem" }}>
+                      {entry.type === 'water' ? '💧 Água' : entry.type === 'food' ? '🍖 Comida' : '💧+🍖 Ambos'}
+                    </td>
+                    <td style={{ padding: "0.8rem", fontSize: "0.85rem", color: entry.operation === 'add' ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
+                      {entry.operation === 'add' ? '+' : '-'}{entry.amount}
+                    </td>
+                    <td style={{ padding: "0.8rem", fontSize: "0.85rem", color: "var(--text-secondary)" }}>{entry.reason}</td>
+                    <td style={{ padding: "0.8rem", fontSize: "0.85rem", color: "var(--text-muted)" }}>Supabase Sync Pendente</td>
+                  </tr>
+                ))}
+                {(!dadosGlobais.food?.history || dadosGlobais.food.history.length === 0) && (
+                  <tr>
+                    <td colSpan={6} style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>Nenhum registro encontrado.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

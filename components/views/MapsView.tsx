@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import { getAllMapsFromDB, saveMapToDB, deleteMapFromDB } from "@/hooks/useIndexedDB";
+import { useSystemDialog } from "@/contexts/SystemDialogContext";
 
 export default function MapsView() {
   const { dadosGlobais, setDadosGlobais, salvarEstadoLocal } = useAppContext();
+  const { showConfirm } = useSystemDialog();
   const [mapsLoaded, setMapsLoaded] = useState<{id: string, name: string, data: string}[]>([]);
   const [currentMapIndex, setCurrentMapIndex] = useState(0);
 
@@ -50,7 +52,7 @@ export default function MapsView() {
   const handleDelete = async () => {
     if (mapsLoaded.length === 0) return;
     const currentMap = mapsLoaded[currentMapIndex];
-    if (confirm(`Tem certeza que deseja excluir o mapa ${currentMap.name}?`)) {
+    if (await showConfirm({ title: "Excluir Mapa", message: `Tem certeza que deseja excluir o mapa ${currentMap.name}?`, type: "danger" })) {
       await deleteMapFromDB(currentMap.id);
       setCurrentMapIndex(0);
       loadMaps();

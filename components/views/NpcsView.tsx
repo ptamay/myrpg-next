@@ -2,10 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useAppContext } from "@/contexts/AppContext";
+import { useUserSession } from "@/contexts/UserSessionContext";
 import NpcCard from "./NpcCard";
+import NpcCardPlayer from "../npcs/NpcCardPlayer";
+import { useSystemDialog } from "@/contexts/SystemDialogContext";
 
 export default function NpcsView() {
   const { dadosGlobais, setDadosGlobais, setModals, setActiveData } = useAppContext();
+  const { isGM } = useUserSession();
+  const { showAlert, showConfirm } = useSystemDialog();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
   const [combatMode, setCombatMode] = useState(false);
@@ -24,7 +29,7 @@ export default function NpcsView() {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (ev) => {
+      reader.onload = async (ev) => {
         try {
           const imported = JSON.parse(ev.target?.result as string);
           
@@ -38,19 +43,19 @@ export default function NpcsView() {
           }
 
           if (npcList.length > 0) {
-            if (window.confirm(`Isso irá adicionar/atualizar ${npcList.length} NPCs. Continuar?`)) {
+            if (await showConfirm({ title: "Importar NPCs", message: `Isso irá adicionar/atualizar ${npcList.length} NPCs. Continuar?`, type: "warning" })) {
               // Merge imported NPCs based on ID
               const currentMap = new Map(dadosGlobais.npcs.map((n: any) => [n.id, n]));
               npcList.forEach((n: any) => currentMap.set(n.id, n));
               setDadosGlobais((prev: any) => ({ ...prev, npcs: Array.from(currentMap.values()) }));
-              alert("NPCs importados com sucesso!");
+              await showAlert({ title: "Importação Concluída", message: "NPCs importados com sucesso!", type: "success" });
             }
           } else {
-            alert("Formato inválido. Não foram encontrados NPCs neste arquivo.");
+            await showAlert({ title: "Erro na Importação", message: "Formato inválido. Não foram encontrados NPCs neste arquivo.", type: "danger" });
           }
         } catch (err: any) {
           console.error("Erro de parsing JSON:", err);
-          alert("Erro ao ler o arquivo JSON. Detalhes: " + (err.message || err));
+          await showAlert({ title: "Erro na Importação", message: "Erro ao ler o arquivo JSON. Detalhes: " + (err.message || err), type: "danger" });
         }
       };
       reader.readAsText(file);
@@ -90,44 +95,48 @@ export default function NpcsView() {
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </button>
-            <button className="btn secondary-btn icon-only" title="Exportar Backup de NPCs" onClick={handleExport}>
-              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-            </button>
-            <label className="btn secondary-btn icon-only" title="Importar Backup de NPCs" style={{ margin: 0, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <input type="file" accept=".json" style={{ display: "none" }} onChange={handleImport} />
-              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-              </svg>
-            </label>
-            <label className="combat-toggle-label">
-              <input type="checkbox" checked={combatMode} onChange={(e) => setCombatMode(e.target.checked)} />
-              <div className="combat-toggle-box">
-                <span className="toggle-icon">⚔️</span>
-                <span>Modo Combate</span>
-              </div>
-            </label>
-            {combatMode && (
-              <label className="combat-toggle-label">
-                <input type="checkbox" checked={hideEffects} onChange={(e) => setHideEffects(e.target.checked)} />
-                <div className="combat-toggle-box">
-                  <span className="toggle-icon">🛡️</span>
-                  <span>Esconder Condições</span>
-                </div>
-              </label>
+            {isGM && (
+              <>
+                <button className="btn secondary-btn icon-only" title="Exportar Backup de NPCs" onClick={handleExport}>
+                  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                </button>
+                <label className="btn secondary-btn icon-only" title="Importar Backup de NPCs" style={{ margin: 0, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <input type="file" accept=".json" style={{ display: "none" }} onChange={handleImport} />
+                  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                </label>
+                <label className="combat-toggle-label">
+                  <input type="checkbox" checked={combatMode} onChange={(e) => setCombatMode(e.target.checked)} />
+                  <div className="combat-toggle-box">
+                    <span className="toggle-icon">⚔️</span>
+                    <span>Modo Combate</span>
+                  </div>
+                </label>
+                {combatMode && (
+                  <label className="combat-toggle-label">
+                    <input type="checkbox" checked={hideEffects} onChange={(e) => setHideEffects(e.target.checked)} />
+                    <div className="combat-toggle-box">
+                      <span className="toggle-icon">🛡️</span>
+                      <span>Esconder Condições</span>
+                    </div>
+                  </label>
+                )}
+                <button className="btn primary-btn" onClick={() => { setActiveData(null); setModals((prev: any) => ({ ...prev, npcForm: true })); }}>
+                  <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  <span>Novo NPC</span>
+                </button>
+              </>
             )}
-            <button className="btn primary-btn" onClick={() => { setActiveData(null); setModals((prev: any) => ({ ...prev, npcForm: true })); }}>
-              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              <span>Novo NPC</span>
-            </button>
           </div>
         </header>
 
@@ -141,7 +150,7 @@ export default function NpcsView() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <div className="filter-tags">
-              {["all", "ally", "neutral", "enemy", "dead", "hidden"].map((filter) => (
+              {(isGM ? ["all", "ally", "neutral", "enemy", "dead", "hidden"] : ["all", "ally", "neutral", "enemy", "dead"]).map((filter) => (
                 <button
                   key={filter}
                   className={`filter-tag ${activeFilter === filter ? "active" : ""}`}
@@ -170,11 +179,13 @@ export default function NpcsView() {
           ) : (
             dadosGlobais.npcs
               .filter((npc: any) => {
+                if (!isGM && npc.isHidden) return false;
+                
                 if (searchTerm && !npc.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
                     !npc.title?.toLowerCase().includes(searchTerm.toLowerCase()) && 
                     !npc.faction?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
                 
-                if (activeFilter === "all") return !npc.isHidden;
+                if (activeFilter === "all") return isGM ? !npc.isHidden : true;
                 if (activeFilter === "dead") return npc.isDead;
                 if (activeFilter === "hidden") return npc.isHidden;
                 
@@ -190,7 +201,9 @@ export default function NpcsView() {
                 return aDead - bDead;
               })
               .map((npc: any) => (
-                <NpcCard key={npc.id} npc={npc} combatMode={combatMode} hideEffects={hideEffects} />
+                isGM 
+                  ? <NpcCard key={npc.id} npc={npc} combatMode={combatMode} hideEffects={hideEffects} />
+                  : <NpcCardPlayer key={npc.id} npc={npc} />
               ))
           )}
         </div>

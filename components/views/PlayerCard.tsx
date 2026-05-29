@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useAppContext } from "@/contexts/AppContext";
+import { useSystemDialog } from "@/contexts/SystemDialogContext";
 
 const SAVES_MAP = [
   { key: "FOR", attr: "str" },
@@ -39,6 +40,7 @@ interface PlayerCardProps {
 
 export default function PlayerCard({ player }: PlayerCardProps) {
   const { dadosGlobais, setDadosGlobais, setModals, setActiveData, salvarEstadoLocal } = useAppContext();
+  const { showConfirm } = useSystemDialog();
   const [skillsExpanded, setSkillsExpanded] = useState(false);
   const [attacksExpanded, setAttacksExpanded] = useState(false);
 
@@ -57,19 +59,27 @@ export default function PlayerCard({ player }: PlayerCardProps) {
     setModals((prev: any) => ({ ...prev, playerDetail: true }));
   };
 
-  const removePlayer = (e: React.MouseEvent) => {
+  const removePlayer = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm(`Tem certeza que deseja excluir o jogador ${player.name}?`)) {
+    if (await showConfirm({ title: "Remover Jogador", message: `Tem certeza que deseja excluir o jogador ${player.name}?`, type: "danger" })) {
       const newPlayers = dadosGlobais.players.filter((p: any) => p.id !== player.id);
       setDadosGlobais({ ...dadosGlobais, players: newPlayers });
       setTimeout(salvarEstadoLocal, 100);
     }
   };
 
-  const hpPct = player.hpMax > 0 ? Math.max(0, Math.min(100, ((player.hpCurrent || 0) / player.hpMax) * 100)) : 0;
-  let hpColorClass = "";
-  if (hpPct <= 25) hpColorClass = "danger";
-  else if (hpPct <= 50) hpColorClass = "warning";
+  const hpPct = player.hpMax > 0 ? Math.max(0, Math.min(100, ((player.hpCurrent !== undefined ? player.hpCurrent : player.hpMax) / player.hpMax) * 100)) : 0;
+  
+  let hpColor = "#4ade80"; // Saudável (soft green)
+  let hpStatusText = "Saudável";
+
+  if (hpPct <= 50) {
+    hpColor = "#f87171"; // Perigo (soft red)
+    hpStatusText = "Perigo";
+  } else if (hpPct <= 75) {
+    hpColor = "#fbbf24"; // Ok (soft orange/amber)
+    hpStatusText = "Ok";
+  }
 
   const profBonus = player.profBonus || "2";
 
@@ -86,17 +96,26 @@ export default function PlayerCard({ player }: PlayerCardProps) {
         ) : (
           <div className="npc-card-placeholder">{player.name.charAt(0).toUpperCase()}</div>
         )}
-        <div className="npc-card-title-area">
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <span className="npc-card-name" style={{ flex: 1, wordBreak: "break-word", lineHeight: 1.2, fontSize: player.name?.length > 15 ? "0.9rem" : "1.1rem", whiteSpace: "normal" }}>
+        <div className="npc-card-title-area" style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span className="npc-card-name" style={{ margin: 0, fontSize: player.name?.length > 15 ? "1.05rem" : "1.25rem", fontWeight: 800 }}>
               {player.name}
             </span>
-            {player.inspiration && <span className="inspiration-badge" title="Inspiração" style={{ marginLeft: "6px" }}>🌟</span>}
+            {player.inspiration && <span className="inspiration-badge" title="Inspiração">🌟</span>}
           </div>
-          <div className="npc-card-title">{player.classLevel || 'Sem classe/nível'}</div>
+          <div className="npc-card-title">
+            {player.playerClass || player.classLevel || 'Sem classe'} {player.playerLevel ? `Nv. ${player.playerLevel}` : ''}
+            <span style={{ margin: "0 6px", opacity: 0.5 }}>•</span>
+            <span style={{ color: hpColor, fontWeight: 700 }}>{hpStatusText}</span>
+          </div>
           <div className="npc-card-meta">
             <span>{player.race || '---'}</span>
-            {player.playerName && <><span>•</span><span>Jogador: {player.playerName}</span></>}
+            {player.playerName && (
+              <>
+                <span>•</span>
+                <span>Jogador: {player.playerName}</span>
+              </>
+            )}
           </div>
         </div>
         <div className="npc-card-actions">
@@ -138,9 +157,9 @@ export default function PlayerCard({ player }: PlayerCardProps) {
           <div className="stat-mini" title="Percepção Passiva">👁️ {player.perc || '--'}</div>
         </div>
 
-        <div style={{ display: "flex", gap: "8px", marginTop: "1rem", alignItems: "stretch", width: "100%" }}>
-          <div className="npc-card-hp-area" style={{ flex: 2, marginTop: 0, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-            <div className="hp-header" style={{ marginBottom: "4px" }}>
+        <div style={{ display: "flex", gap: "12px", marginTop: "1rem", alignItems: "center", width: "100%", padding: "0 1.5rem 1rem" }}>
+          <div className="npc-card-hp-area" style={{ flex: 2.2, display: "flex", flexDirection: "column", padding: 0 }}>
+            <div className="hp-header" style={{ marginBottom: "4px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span>PONTOS DE VIDA</span>
               <div className="hp-values-group">
                 <span className="hp-total-display">{player.hpCurrent || 0}</span>
@@ -148,11 +167,11 @@ export default function PlayerCard({ player }: PlayerCardProps) {
               </div>
             </div>
             <div className="hp-bar-bg" style={{ height: "6px" }}>
-              <div className={`hp-bar-fill ${hpColorClass}`} style={{ width: `${hpPct}%` }}></div>
+              <div className="hp-bar-fill" style={{ width: `${hpPct}%`, backgroundColor: hpColor }}></div>
             </div>
           </div>
           
-          <div className="player-card-hd-badge" style={{ flex: 1, background: "rgba(255, 255, 255, 0.03)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "4px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "4px 6px", minWidth: "65px", height: "32px", boxSizing: "border-box" }}>
+          <div className="player-card-hd-badge" style={{ flex: "0 0 85px", background: "rgba(255, 255, 255, 0.03)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "6px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "4px 6px", height: "38px", boxSizing: "border-box" }}>
             <span style={{ fontSize: "0.55rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.03em", lineHeight: 1, display: "block" }}>Dado Vida</span>
             <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--text-primary)", marginTop: "2px", lineHeight: 1, display: "block" }}>{player.hdTotal || '1d10'}</span>
           </div>
@@ -168,10 +187,16 @@ export default function PlayerCard({ player }: PlayerCardProps) {
             <div className={`player-skills-collapse ${attacksExpanded ? "active" : ""}`} onClick={(e) => e.stopPropagation()} style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "8px", padding: attacksExpanded ? "12px" : "0 12px" }}>
               <div className="player-attacks-list" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 {player.attacks.map((a: any, i: number) => (
-                  <div key={i} className="player-atk-row" style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", padding: "6px 10px", background: "rgba(255,255,255,0.03)", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.02)" }}>
-                    <span className="atk-name" style={{ fontWeight: 700, color: "#fff" }}>{a.name}</span>
-                    <span className="atk-bonus" style={{ color: "var(--accent-primary)", fontWeight: 700 }}>{a.bonus || '--'}</span>
-                    <span className="atk-dmg" style={{ color: "var(--text-secondary)" }}>{a.dmg || '--'}</span>
+                  <div key={i} className="player-atk-row" style={{ display: "flex", alignItems: "center", fontSize: "0.8rem", padding: "6px 10px", background: "rgba(255,255,255,0.03)", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.02)" }}>
+                    <span className="atk-name" style={{ width: "45%", fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {a.name ? a.name.charAt(0).toUpperCase() + a.name.slice(1) : ''}
+                    </span>
+                    <span className="atk-bonus" style={{ width: "20%", textAlign: "center", color: "var(--accent-primary)", fontWeight: 700 }}>
+                      {a.bonus || '--'}
+                    </span>
+                    <span className="atk-dmg" style={{ width: "35%", textAlign: "right", color: "var(--text-secondary)" }}>
+                      {a.dmg || '--'}
+                    </span>
                   </div>
                 ))}
               </div>

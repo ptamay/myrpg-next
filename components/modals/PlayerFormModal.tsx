@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import Modal from "../ui/Modal";
 import CropModal from "./CropModal";
 import { useAppContext } from "@/contexts/AppContext";
+import { useSystemDialog } from "@/contexts/SystemDialogContext";
 
 interface PlayerFormModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
     "Religião (Int)", "Sobrevivência (Sab)"
   ];
   const { dadosGlobais, setDadosGlobais, salvarEstadoLocal, activeData } = useAppContext();
+  const { showAlert } = useSystemDialog();
 
   const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
@@ -83,7 +85,32 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
       const base64Images = await Promise.all(filesArray.map(file => {
         return new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload = (ev) => resolve(ev.target?.result as string);
+          reader.onload = (ev) => {
+            const img = new window.Image();
+            img.onload = () => {
+              const canvas = document.createElement("canvas");
+              const ctx = canvas.getContext("2d");
+              if (!ctx) return resolve(ev.target?.result as string);
+              
+              const maxW = 1200;
+              const maxH = 1200;
+              let width = img.width;
+              let height = img.height;
+              
+              if (width > height) {
+                if (width > maxW) { height = Math.round(height * maxW / width); width = maxW; }
+              } else {
+                if (height > maxH) { width = Math.round(width * maxH / height); height = maxH; }
+              }
+              
+              canvas.width = width;
+              canvas.height = height;
+              ctx.drawImage(img, 0, 0, width, height);
+              resolve(canvas.toDataURL("image/jpeg", 0.7));
+            };
+            img.onerror = () => resolve(ev.target?.result as string);
+            img.src = ev.target?.result as string;
+          };
           reader.onerror = reject;
           reader.readAsDataURL(file);
         });
@@ -113,7 +140,8 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
 
         setInputValue("name", data.name);
         setInputValue("playerName", data.playerName);
-        setInputValue("classLevel", data.classLevel);
+        setInputValue("playerClass", data.playerClass);
+        setInputValue("playerLevel", data.playerLevel);
         setInputValue("race", data.race);
         setInputValue("str", data.str);
         setInputValue("dex", data.dex);
@@ -128,7 +156,9 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
         setInputValue("perc", data.perc);
         setInputValue("hdTotal", data.hdTotal);
         
-        if (data.profBonus) setProfBonusState(data.profBonus);
+        if (data.profBonus !== undefined && data.profBonus !== null) {
+          setProfBonusState(String(data.profBonus).replace('+', ''));
+        }
         if (data.saves && Array.isArray(data.saves)) setSelectedSaves(data.saves);
         if (data.skills && Array.isArray(data.skills)) setSelectedSkills(data.skills);
         if (data.attacks && Array.isArray(data.attacks)) {
@@ -136,9 +166,9 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
         }
       }
 
-      alert("Ficha importada com sucesso! Verifique os dados e clique em Salvar.");
+      await showAlert({ title: "Importação Concluída", message: "Ficha importada com sucesso! Verifique os dados e clique em Salvar.", type: "success" });
     } catch (error: any) {
-      alert("Falha ao importar: " + error.message);
+      await showAlert({ title: "Erro na Importação", message: "Falha ao importar: " + error.message, type: "danger" });
     } finally {
       setIsImporting(false);
       if (importFileInputRef.current) importFileInputRef.current.value = "";
@@ -173,7 +203,8 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
       id,
       name: formData.get("name"),
       playerName: formData.get("playerName"),
-      classLevel: formData.get("classLevel"),
+      playerClass: formData.get("playerClass"),
+      playerLevel: parseInt(formData.get("playerLevel") as string) || 1,
       race: formData.get("race"),
       str: formData.get("str"),
       dex: formData.get("dex"),
@@ -220,7 +251,7 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
             <h2 className="modal-title" id="player-form-title">Novo Jogador</h2>
           </div>
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            <input type="file" id="input-player-pdf" accept="image/*" multiple className="hidden" ref={importFileInputRef} onChange={handleImportImages} style={{ display: "none" }} />
+            <input type="file" id="input-player-pdf" accept="image/*,application/pdf" multiple className="hidden" ref={importFileInputRef} onChange={handleImportImages} style={{ display: "none" }} />
             <button type="button" onClick={() => importFileInputRef.current?.click()} className="btn secondary-btn small-btn" disabled={isImporting}>
               {isImporting ? (
                 <span>Carregando...</span>
@@ -232,7 +263,7 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
                     <line x1="16" y1="13" x2="8" y2="13"></line>
                     <line x1="16" y1="17" x2="8" y2="17"></line>
                   </svg>
-                  <span>Importar Ficha (Imagens)</span>
+                  <span>Importar Ficha (Img/PDF)</span>
                 </>
               )}
             </button>
@@ -275,11 +306,15 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
                 </div>
               </div>
               <div className="form-row mt-2">
-                <div className="form-group flex-1">
-                  <label>Classe / Nível</label>
-                  <input type="text" name="classLevel" className="journey-input" defaultValue={activeData?.classLevel || ""} />
+                <div className="form-group flex-2">
+                  <label>Classe</label>
+                  <input type="text" name="playerClass" className="journey-input" defaultValue={activeData?.playerClass || activeData?.classLevel || ""} />
                 </div>
                 <div className="form-group flex-1">
+                  <label>Nível</label>
+                  <input type="number" name="playerLevel" className="journey-input" defaultValue={activeData?.playerLevel || 1} min="1" />
+                </div>
+                <div className="form-group flex-2">
                   <label>Raça</label>
                   <input type="text" name="race" className="journey-input" defaultValue={activeData?.race || ""} />
                 </div>

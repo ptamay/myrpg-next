@@ -17,11 +17,12 @@ export async function POST(req: Request) {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `Você é um assistente especializado em extrair dados de fichas de personagens de RPG (D&D 5e e similares).
-O usuário forneceu ${images.length} imagem(ns) da sua ficha de personagem. Analise as imagens e extraia as seguintes informações em formato JSON, seguindo EXATAMENTE esta estrutura (omita campos se não encontrar):
+O usuário forneceu documento(s) (imagem ou PDF) da sua ficha de personagem. Analise o documento e extraia as seguintes informações em formato JSON, seguindo EXATAMENTE esta estrutura (omita campos se não encontrar):
 {
   "name": "string (Nome do personagem)",
   "playerName": "string (Nome do jogador, se houver)",
-  "classLevel": "string (Classe e nível, ex: Guerreiro 3)",
+  "playerClass": "string (Apenas a Classe, ex: Guerreiro)",
+  "playerLevel": number (Apenas o nível numérico, ex: 3),
   "race": "string (Raça)",
   "str": "string (Valor do atributo Força, ex: 15)",
   "dex": "string",
@@ -35,15 +36,15 @@ O usuário forneceu ${images.length} imagem(ns) da sua ficha de personagem. Anal
   "speed": "string (Deslocamento, ex: 9m ou 30ft)",
   "perc": "string (Percepção Passiva, ex: 12)",
   "hdTotal": "string (Dado de Vida Total, ex: 3d10)",
-  "profBonus": "string (Bônus de Proficiência, ex: 2)",
+  "profBonus": number (Apenas o número do Bônus de Proficiência, sem o sinal de +, ex: 2),
   "attacks": [
     { "name": "string (Nome da Arma)", "bonus": "string (Bônus)", "dmg": "string (Dano/Tipo)" }
   ],
   "saves": [
-    "string (Exatamente e somente: FOR, DES, CON, INT, SAB ou CAR)"
+    "string (Exatamente e somente: FOR, DES, CON, INT, SAB ou CAR. REGRA VISUAL ABSOLUTA: Há um pequeno círculo à esquerda de cada salvaguarda. Só inclua se o círculo estiver TOTALMENTE PREENCHIDO/PINTADO (●) ou marcado com um X. Se o círculo estiver VAZIO (○), NÃO INCLUA, mesmo que exista um número! Se for um PDF preenchível, verifique se a caixa de seleção está 'ativada'.)"
   ],
   "skills": [
-    "string (Use exatamente os nomes: Acrobacia (Des), Arcanismo (Int), Atletismo (For), Atuação (Car), Enganação (Car), Furtividade (Des), História (Int), Intimidação (Car), Intuição (Sab), Investigação (Int), Lidar c/ Animais (Sab), Medicina (Sab), Natureza (Int), Percepção (Sab), Persuasão (Car), Prestidigitação (Des), Religião (Int), Sobrevivência (Sab))"
+    "string (Use exatamente os nomes: Acrobacia (Des), Arcanismo (Int), Atletismo (For), Atuação (Car), Enganação (Car), Furtividade (Des), História (Int), Intimidação (Car), Intuição (Sab), Investigação (Int), Lidar c/ Animais (Sab), Medicina (Sab), Natureza (Int), Percepção (Sab), Persuasão (Car), Prestidigitação (Des), Religião (Int), Sobrevivência (Sab). REGRA VISUAL ABSOLUTA: Só inclua se o círculo à esquerda da perícia estiver TOTALMENTE PREENCHIDO/PINTADO (●) ou marcado com um X. Círculos vazios (○) NÃO SÃO PROFICIÊNCIAS, ignore-os! Se for um PDF preenchível, verifique se o checkbox correspondente está 'ativado'.)"
   ]
 }
 
@@ -54,12 +55,17 @@ Responda APENAS com o JSON válido, sem nenhum texto extra e sem formatação ma
     const parts = [
       prompt,
       ...images.map((base64Image: string) => {
-        // Remover prefixo do data URL se existir (ex: data:image/png;base64,)
-        const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
-        // Tentar inferir o tipo de imagem ou assumir jpeg
         let mimeType = "image/jpeg";
-        if (base64Image.startsWith("data:image/png")) mimeType = "image/png";
-        else if (base64Image.startsWith("data:image/webp")) mimeType = "image/webp";
+        let base64Data = base64Image;
+        
+        const match = base64Image.match(/^data:([^;]+);base64,(.+)$/);
+        if (match) {
+          mimeType = match[1];
+          base64Data = match[2];
+        } else {
+          // Fallback para caso venha sem prefixo (já limpo no front ou afim)
+          base64Data = base64Image;
+        }
         
         return {
           inlineData: {

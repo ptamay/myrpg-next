@@ -14,6 +14,8 @@ export interface Player {
   name: string;
   playerName: string;
   classLevel: string;
+  playerClass?: string;
+  playerLevel?: number;
   race: string;
   str: number | string;
   dex: number | string;

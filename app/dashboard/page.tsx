@@ -3,10 +3,13 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { UserSessionProvider, useUserSession } from "@/contexts/UserSessionContext";
 import AppShell from "@/components/layout/AppShell";
+import LoginScreen from "@/components/LoginScreen";
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { isAuthenticated } = useAuth();
+  const { session } = useUserSession();
   const router = useRouter();
 
   useEffect(() => {
@@ -19,5 +22,13 @@ export default function DashboardPage() {
     return null; // or a loading spinner
   }
 
-  return <AppShell />;
+  return session === null ? <LoginScreen /> : <AppShell />;
+}
+
+export default function DashboardPage() {
+  return (
+    <UserSessionProvider>
+      <DashboardContent />
+    </UserSessionProvider>
+  );
 }

@@ -1,9 +1,11 @@
 "use client";
 
 import { useAppContext } from "@/contexts/AppContext";
+import { useSystemDialog } from "@/contexts/SystemDialogContext";
 
 export default function SettingsView() {
   const { diaAtual, indiceBlocoAtivo, jornadaPorDia, dadosGlobais } = useAppContext();
+  const { showAlert, showConfirm } = useSystemDialog();
 
   const handleExportFull = () => {
     const data = {
@@ -19,35 +21,35 @@ export default function SettingsView() {
     a.click();
   };
 
-  const handleImportFull = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportFull = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (ev) => {
+      reader.onload = async (ev) => {
         try {
           const imported = JSON.parse(ev.target?.result as string);
           if (imported.dadosGlobais && imported.jornadaPorDia) {
-            if (window.confirm("Isso irá substituir TODOS os seus dados atuais pelo backup selecionado. Tem certeza?")) {
+            if (await showConfirm({ title: "Restaurar Grimório", message: "Isso irá substituir TODOS os seus dados atuais pelo backup selecionado. Tem certeza?", type: "warning" })) {
               localStorage.setItem("myrpg_dia_atual", JSON.stringify(imported.diaAtual || 1));
               localStorage.setItem("myrpg_bloco_ativo", JSON.stringify(imported.indiceBlocoAtivo || 0));
               localStorage.setItem("myrpg_dados_globais", JSON.stringify(imported.dadosGlobais));
               localStorage.setItem("myrpg_jornada_por_dia", JSON.stringify(imported.jornadaPorDia));
-              alert("Backup restaurado com sucesso! O sistema será recarregado.");
+              await showAlert({ title: "Sucesso", message: "Backup restaurado com sucesso! O sistema será recarregado.", type: "success" });
               window.location.reload();
             }
           } else {
-            alert("Formato inválido. O arquivo de backup completo deve conter 'dadosGlobais' e 'jornadaPorDia'.");
+            await showAlert({ title: "Erro na Restauração", message: "Formato inválido. O arquivo de backup completo deve conter 'dadosGlobais' e 'jornadaPorDia'.", type: "danger" });
           }
         } catch (err) {
-          alert("Erro ao ler o arquivo de backup.");
+          await showAlert({ title: "Erro na Restauração", message: "Erro ao ler o arquivo de backup.", type: "danger" });
         }
       };
       reader.readAsText(file);
     }
   };
 
-  const handleReset = () => {
-    if (window.confirm("Apagar absolutamente todos os dados e resetar a campanha para o estado inicial? Isso não pode ser desfeito.")) {
+  const handleReset = async () => {
+    if (await showConfirm({ title: "Limpar Tudo", message: "Apagar absolutamente todos os dados e resetar a campanha para o estado inicial? Isso não pode ser desfeito.", type: "danger" })) {
       localStorage.removeItem("myrpg_dia_atual");
       localStorage.removeItem("myrpg_bloco_ativo");
       localStorage.removeItem("myrpg_dados_globais");

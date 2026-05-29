@@ -297,8 +297,25 @@ export default function DashboardBlock() {
                 objetivos: pSessionRaw.objetivos || [],
                 concluido: !!pSessionRaw.concluido
               };
-              const hpPct = player.hpMax > 0 ? Math.max(0, Math.min(100, ((player.hpCurrent || player.hpMax) / player.hpMax) * 100)) : 0;
-              let hpColorClass = hpPct <= 25 ? 'danger' : hpPct <= 50 ? 'warning' : '';
+              const hpPct = player.hpMax > 0 ? Math.max(0, Math.min(100, ((player.hpCurrent !== undefined ? player.hpCurrent : player.hpMax) / player.hpMax) * 100)) : 0;
+              
+              let hpColor = "#4ade80"; // Saudável (soft green)
+              let hpStatusText = "Saudável";
+              let hpBg = "rgba(74, 222, 128, 0.1)";
+              let hpBorder = "rgba(74, 222, 128, 0.2)";
+
+              if (hpPct <= 50) {
+                hpColor = "#f87171"; // Perigo (soft red)
+                hpStatusText = "Perigo";
+                hpBg = "rgba(248, 113, 113, 0.12)";
+                hpBorder = "rgba(248, 113, 113, 0.25)";
+              } else if (hpPct <= 75) {
+                hpColor = "#fbbf24"; // Ok (soft orange/amber)
+                hpStatusText = "Ok";
+                hpBg = "rgba(251, 191, 36, 0.12)";
+                hpBorder = "rgba(251, 191, 36, 0.25)";
+              }
+
               const isDone = pSession.concluido;
               const acoesList = pSession.acoes || [];
               const acaoAtiva = acoesList.find((a: any) => typeof a === 'object' && !a.concluida);
@@ -323,7 +340,7 @@ export default function DashboardBlock() {
                   {/* HEADER: Identity + HP */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                      <div style={{ position: "relative", width: "48px", height: "48px", borderRadius: "50%", overflow: "hidden", border: `2px solid ${hpPct <= 25 ? '#ef4444' : hpPct <= 50 ? '#f59e0b' : 'rgba(255,255,255,0.1)'}` }}>
+                      <div style={{ position: "relative", width: "48px", height: "48px", borderRadius: "50%", overflow: "hidden", border: '2px solid rgba(255,255,255,0.1)' }}>
                         {player.image ? (
                           <img src={player.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: player.isDead ? "grayscale(100%)" : "none" }} />
                         ) : (
@@ -334,13 +351,19 @@ export default function DashboardBlock() {
                       </div>
                       <div style={{ display: "flex", flexDirection: "column" }}>
                         <span style={{ fontSize: "1.05rem", fontWeight: 800, color: "#fff", lineHeight: 1.1 }}>{player.name}</span>
-                        <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.02em", marginTop: "2px" }}>{player.classLevel || 'Sem classe'}</span>
+                        <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.02em", marginTop: "2px" }}>
+                          {player.playerClass || player.classLevel || 'Sem classe'}{player.playerLevel ? ` Nv. ${player.playerLevel}` : ''}
+                          <span style={{ margin: "0 6px", opacity: 0.5 }}>•</span>
+                          <span style={{ color: hpColor, fontWeight: 700 }}>{hpStatusText}</span>
+                        </span>
                       </div>
                     </div>
                     {/* HP PILL */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px", background: hpPct <= 25 ? "rgba(239,68,68,0.15)" : hpPct <= 50 ? "rgba(245,158,11,0.15)" : "rgba(255,255,255,0.05)", padding: "4px 10px", borderRadius: "20px", border: `1px solid ${hpPct <= 25 ? "rgba(239,68,68,0.3)" : hpPct <= 50 ? "rgba(245,158,11,0.3)" : "rgba(255,255,255,0.1)"}` }}>
-                      <span style={{ fontSize: "0.7rem" }}>❤️</span>
-                      <span style={{ fontSize: "0.85rem", fontWeight: 800, color: hpPct <= 25 ? "#ef4444" : hpPct <= 50 ? "#f59e0b" : "#10b981" }}>{player.hpCurrent || player.hpMax || 0} <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 500 }}>/ {player.hpMax || 0}</span></span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", background: hpBg, padding: "4px 10px", borderRadius: "20px", border: `1px solid ${hpBorder}` }}>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke={hpColor} strokeWidth="2.5">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                      </svg>
+                      <span style={{ fontSize: "0.85rem", fontWeight: 800, color: hpColor }}>{player.hpCurrent !== undefined ? player.hpCurrent : player.hpMax || 0} <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 500, opacity: 0.7 }}>/ {player.hpMax || 0}</span></span>
                     </div>
                   </div>
 

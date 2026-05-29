@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Modal from "../ui/Modal";
 import { useAppContext } from "@/contexts/AppContext";
+import { useSystemDialog } from "@/contexts/SystemDialogContext";
 
 const SAVES_MAP = [
   { key: "FOR", attr: "str" },
@@ -40,7 +41,8 @@ interface SessionPlayerModalProps {
 }
 
 export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerModalProps) {
-  const { diaAtual, jornadaPorDia, setJornadaPorDia, activeData, dadosGlobais, setDadosGlobais, salvarEstadoLocal } = useAppContext();
+  const { diaAtual, jornadaPorDia, setJornadaPorDia, activeData, setActiveData, setModals, dadosGlobais, setDadosGlobais, salvarEstadoLocal } = useAppContext();
+  const { showAlert, showConfirm } = useSystemDialog();
 
   const [acoes, setAcoes] = useState<any[]>([]);
   const [concluido, setConcluido] = useState(false);
@@ -110,10 +112,18 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
   }, 0);
   const remainingTimeMinutes = 240 - totalTimeSpentInBlock;
 
-  const hpPct = player.hpMax > 0 ? Math.max(0, Math.min(100, ((player.hpCurrent || 0) / player.hpMax) * 100)) : 0;
-  let hpColorClass = "";
-  if (hpPct <= 25) hpColorClass = "danger";
-  else if (hpPct <= 50) hpColorClass = "warning";
+  const hpPct = player.hpMax > 0 ? Math.max(0, Math.min(100, ((player.hpCurrent !== undefined ? player.hpCurrent : player.hpMax) / player.hpMax) * 100)) : 0;
+
+  let hpColor = "#4ade80"; // Saudável (soft green)
+  let hpStatusText = "Saudável";
+
+  if (hpPct <= 50) {
+    hpColor = "#f87171"; // Perigo (soft red)
+    hpStatusText = "Perigo";
+  } else if (hpPct <= 75) {
+    hpColor = "#fbbf24"; // Ok (soft orange/amber)
+    hpStatusText = "Ok";
+  }
 
   const profBonus = player.profBonus || "2";
   const profBonusNum = parseInt(profBonus.toString()) || 2;
@@ -131,9 +141,9 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
     setModals((prev: any) => ({ ...prev, playerForm: true }));
   };
 
-  const removePlayer = (e: React.MouseEvent) => {
+  const removePlayer = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm(`Tem certeza que deseja excluir o jogador ${player.name}?`)) {
+    if (await showConfirm({ title: "Remover Jogador", message: `Tem certeza que deseja excluir o jogador ${player.name}?`, type: "danger" })) {
       const newPlayers = dadosGlobais.players.filter((p: any) => p.id !== player.id);
       setDadosGlobais({ ...dadosGlobais, players: newPlayers });
       setTimeout(salvarEstadoLocal, 100);
@@ -211,14 +221,14 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
     onClose();
   };
 
-  const handleAddAcao = () => {
+  const handleAddAcao = async () => {
     if (acoes.some(a => !a.concluida)) return;
 
     const otherTimeSpent = acoes.filter(a => a.concluida).reduce((sum, a) => sum + (a.timeCost || 0), 0);
     const remaining = 240 - otherTimeSpent;
 
     if (remaining <= 0) {
-      alert("Não há mais tempo disponível neste bloco.");
+      await showAlert("Não há mais tempo disponível neste bloco.");
       return;
     }
 
@@ -237,7 +247,7 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
     }
   };
   
-  const handleAcaoChange = (index: number, field: string, value: any) => {
+  const handleAcaoChange = async (index: number, field: string, value: any) => {
     const newAcoes = [...acoes];
     
     let newTimeCost = newAcoes[index].timeCost || 60;
@@ -251,7 +261,7 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
     const availableTime = 240 - otherTimeSpent;
 
     if (newTimeCost > availableTime) {
-      alert(`Esta ação requer ${newTimeCost} min, mas restam apenas ${availableTime} min no bloco.`);
+      await showAlert(`Esta ação requer ${newTimeCost} min, mas restam apenas ${availableTime} min no bloco.`);
       return;
     }
 
@@ -320,7 +330,11 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
                     </span>
                     {player.inspiration && <span className="inspiration-badge" title="Inspiração" style={{ marginLeft: "6px" }}>🌟</span>}
                   </div>
-                  <div className="npc-card-title">{player.classLevel || 'Sem classe/nível'}</div>
+                  <div className="npc-card-title">
+                    {player.playerClass || player.classLevel || 'Sem classe'}{player.playerLevel ? ` Nv. ${player.playerLevel}` : ''}
+                    <span style={{ margin: "0 6px", opacity: 0.5 }}>•</span>
+                    <span style={{ color: hpColor, fontWeight: 700 }}>{hpStatusText}</span>
+                  </div>
                   <div className="npc-card-meta">
                     <span>{player.race || '---'}</span>
                     {player.playerName && <><span>•</span><span>Jogador: {player.playerName}</span></>}
@@ -363,7 +377,7 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
                       </div>
                     </div>
                     <div className="hp-bar-bg" style={{ height: "6px" }}>
-                      <div className={`hp-bar-fill ${hpColorClass}`} style={{ width: `${hpPct}%` }}></div>
+                      <div className="hp-bar-fill" style={{ width: `${hpPct}%`, backgroundColor: hpColor }}></div>
                     </div>
                   </div>
                   
@@ -383,10 +397,16 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
                     <div className={`player-skills-collapse ${attacksExpanded ? "active" : ""}`} onClick={(e) => e.stopPropagation()}>
                       <div className="player-attacks-list" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                         {player.attacks.map((a: any, i: number) => (
-                          <div key={i} className="player-atk-row" style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", padding: "4px 8px", background: "rgba(255,255,255,0.05)", borderRadius: "4px" }}>
-                            <span className="atk-name" style={{ fontWeight: 600 }}>{a.name}</span>
-                            <span className="atk-bonus" style={{ color: "var(--accent-primary)" }}>{a.bonus || '--'}</span>
-                            <span className="atk-dmg">{a.dmg || '--'}</span>
+                          <div key={i} className="player-atk-row" style={{ display: "flex", alignItems: "center", fontSize: "0.8rem", padding: "6px 10px", background: "rgba(255,255,255,0.05)", borderRadius: "4px" }}>
+                            <span className="atk-name" style={{ width: "45%", fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {a.name ? a.name.charAt(0).toUpperCase() + a.name.slice(1) : ''}
+                            </span>
+                            <span className="atk-bonus" style={{ width: "20%", textAlign: "center", color: "var(--accent-primary)", fontWeight: 700 }}>
+                              {a.bonus || '--'}
+                            </span>
+                            <span className="atk-dmg" style={{ width: "35%", textAlign: "right", color: "var(--text-secondary)" }}>
+                              {a.dmg || '--'}
+                            </span>
                           </div>
                         ))}
                       </div>

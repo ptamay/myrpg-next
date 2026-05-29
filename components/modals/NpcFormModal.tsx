@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import Modal from "../ui/Modal";
 import CropModal from "./CropModal";
 import { useAppContext } from "@/contexts/AppContext";
+import { useSystemDialog } from "@/contexts/SystemDialogContext";
 
 interface NpcFormModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface NpcFormModalProps {
 
 export default function NpcFormModal({ isOpen, onClose }: NpcFormModalProps) {
   const { dadosGlobais, setDadosGlobais, salvarEstadoLocal, activeData } = useAppContext();
+  const { showConfirm, showAlert } = useSystemDialog();
   
   const [hasSpells, setHasSpells] = useState(false);
   const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
@@ -111,6 +113,7 @@ export default function NpcFormModal({ isOpen, onClose }: NpcFormModalProps) {
     setDadosGlobais({ ...dadosGlobais, npcs: newNpcs });
     setTimeout(salvarEstadoLocal, 100);
     onClose();
+    setTimeout(() => showAlert({ title: "Sucesso", message: "Alterações Salvas", type: "success" }), 200);
   };
 
   // The useEffect was moved up
@@ -124,7 +127,7 @@ export default function NpcFormModal({ isOpen, onClose }: NpcFormModalProps) {
             <h2 className="modal-title">Novo NPC</h2>
           </div>
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            <button className="btn secondary-btn small-btn">Importar via Texto</button>
+            <button type="button" className="btn secondary-btn small-btn" onClick={() => setModals((prev: any) => ({ ...prev, importNpcText: true }))}>Importar via Texto</button>
             <button className="close-btn" onClick={onClose}>
               <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -275,12 +278,13 @@ export default function NpcFormModal({ isOpen, onClose }: NpcFormModalProps) {
           <div style={{ display: "flex", gap: "10px" }}>
             <button type="button" className="btn danger-btn" onClick={onClose}><span>Cancelar</span></button>
             {activeData && (
-              <button type="button" className="btn danger-btn" onClick={() => {
-                if (window.confirm(`Tem certeza que deseja excluir o NPC "${activeData.name}" permanentemente?`)) {
+              <button type="button" className="btn danger-btn" onClick={async () => {
+                if (await showConfirm({ title: "Excluir NPC", message: `Tem certeza que deseja excluir o NPC "${activeData.name}" permanentemente?`, type: "danger" })) {
                   const newNpcs = dadosGlobais.npcs.filter((n: any) => n.id !== activeData.id);
                   setDadosGlobais({ ...dadosGlobais, npcs: newNpcs });
                   setTimeout(salvarEstadoLocal, 100);
                   onClose();
+                  setTimeout(() => showAlert({ title: "Sucesso", message: "NPC excluido com sucesso", type: "success" }), 200);
                 }
               }}>
                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" style={{ marginRight: "4px" }}>

@@ -5223,3 +5223,369 @@ body.hide-combat-effects .npc-card-combat-console {
 .dead-modal-content:hover .modal-skull-overlay {
     opacity: 1;
 }
+
+/* =========================================================
+   CRÔNICAS — Diário de Bordo + Mural de Investigação
+   Adicionado em: maio 2026
+   ========================================================= */
+
+/* ── DIÁRIO DE BORDO ──────────────────────────────────── */
+
+/* ── TIMELINE DIÁRIO ──────────────────────────────────── */
+
+.timeline-container {
+    position: relative;
+    padding-left: 1.5rem;
+    margin-top: 1rem;
+}
+
+.timeline-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 2rem;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--accent-primary), transparent);
+    opacity: 0.5;
+    z-index: 1;
+}
+
+.timeline-item {
+    position: relative;
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    z-index: 2;
+}
+
+.timeline-avatar-wrapper {
+    position: relative;
+    z-index: 2;
+    margin-top: 0.5rem;
+}
+
+.timeline-avatar-wrapper img, .timeline-avatar-wrapper .diario-avatar-placeholder {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-primary);
+    background: var(--bg-card);
+    object-fit: cover;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.timeline-card {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    position: relative;
+    max-width: 700px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.timeline-card::before {
+    content: '';
+    position: absolute;
+    top: 1.25rem;
+    left: -8px;
+    width: 15px;
+    height: 15px;
+    background: var(--bg-card);
+    border-left: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+    transform: rotate(45deg);
+    transition: border-color var(--transition-fast);
+}
+
+/* Hover no card disparado apenas ao focar na área de texto/imagem */
+.timeline-card:has(.timeline-post-block:hover) {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 12px var(--accent-glow);
+    transform: translateY(-2px);
+}
+
+.timeline-card:has(.timeline-post-block:hover)::before {
+    border-left-color: var(--accent-primary);
+    border-bottom-color: var(--accent-primary);
+}
+
+.timeline-post-block {
+    cursor: pointer;
+    position: relative;
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.timeline-author {
+    font-weight: 700;
+    color: #e3cca1; /* Yellowish author name like screenshot */
+    font-size: 1rem;
+}
+
+.timeline-meta {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.timeline-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary); /* White title like screenshot */
+    margin-bottom: 0.5rem;
+}
+
+.timeline-content {
+    color: var(--text-secondary);
+    line-height: 1.5;
+    white-space: pre-wrap;
+    margin-bottom: 1rem;
+}
+
+.timeline-image {
+    max-width: calc(100% + 2rem);
+    max-height: 300px;
+    object-fit: contain;
+    background: var(--bg-base);
+    border-radius: var(--radius-sm);
+    margin-top: 0.5rem;
+    margin-left: -1rem; /* Negative margin to span full width */
+    margin-right: -1rem;
+    display: block;
+}
+
+.timeline-image-preview {
+    width: 70%;
+    max-height: 250px;
+    object-fit: cover;
+    background: var(--bg-base);
+    border-radius: var(--radius-sm);
+    margin: 0.75rem auto 0 auto;
+    display: block;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--border-subtle);
+    transition: transform var(--transition-fast);
+}
+
+.timeline-post-block:hover .timeline-image-preview {
+    transform: scale(1.02);
+}
+
+.timeline-image-detail {
+    max-width: 100%;
+    max-height: 450px;
+    object-fit: contain;
+    background: var(--bg-base);
+    border-radius: var(--radius-md);
+    margin: 1rem auto;
+    display: block;
+    border: 1px solid var(--border-subtle);
+}
+
+.timeline-content-preview {
+    color: var(--text-secondary);
+    line-height: 1.5;
+    max-height: 4.5em; /* 3 lines * 1.5 line-height */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-footer {
+    display: flex;
+    gap: 1rem;
+    padding-top: 0.75rem;
+    margin-top: 0.75rem;
+    /* Removed top border to match screenshot */
+}
+
+.timeline-action {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: var(--transition-fast);
+    padding: 0;
+}
+
+.timeline-action:hover {
+    color: var(--accent-primary);
+}
+
+.diario-session-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.diario-session-divider-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border-subtle);
+}
+
+.diario-form {
+    background: var(--bg-card);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.diario-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.diario-image-preview {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+    display: block;
+}
+
+.diario-image-upload-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.5rem 1rem;
+    background: hsla(0, 0%, 100%, 0.05);
+    border: 1px dashed var(--border-bright);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.diario-image-upload-label:hover {
+    background: hsla(0, 0%, 100%, 0.1);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.diario-form-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+}
+
+/* ── MURAL DE INVESTIGAÇÃO ────────────────────────────── */
+
+.mural-wrapper {
+    display: flex;
+    height: 100%;
+    overflow: hidden;
+}
+
+.mural-canvas {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background-color: var(--bg-base);
+    /* backgroundImage e backgroundSize são inline (dependem de zoom — valor JS) */
+}
+
+/* Toolbar lateral */
+.mural-toolbar {
+    width: 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem 0;
+    gap: 0.5rem;
+    background: var(--bg-card);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-right: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+    z-index: 10;
+}
+
+/* Remove default HTML number input spinner arrows globally */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none !important;
+    margin: 0 !important;
+}
+input[type="number"] {
+    -moz-appearance: textfield !important;
+}
+
+/* Premium Supply Input Styles (Gestão do Mestre) */
+.supply-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px !important;
+    padding: 6px 12px 4px 12px !important;
+    transition: all 0.2s ease !important;
+    flex: 1;
+}
+
+.supply-input-wrapper:focus-within {
+    border-color: rgba(245, 158, 11, 0.5) !important;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25) !important;
+    background: rgba(0, 0, 0, 0.45) !important;
+}
+
+.supply-input-field {
+    width: 100% !important;
+    height: 38px !important;
+    padding: 0 4px !important;
+    font-size: 1.1rem !important;
+    text-align: center !important;
+    border: none !important;
+    background: transparent !important;
+    color: #fff !important;
+    font-weight: bold !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Hide scrollbar helper */
+.no-scrollbar {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE and Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+}
+

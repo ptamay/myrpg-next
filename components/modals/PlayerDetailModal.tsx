@@ -62,11 +62,11 @@ export default function PlayerDetailModal({ isOpen, onClose, player }: { isOpen:
             </div>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <h2 style={{ fontSize: "1.8rem", fontWeight: 900, color: "#fff", margin: 0, letterSpacing: "-0.02em" }}>{player.name}</h2>
+                <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "#fff", margin: 0, letterSpacing: "-0.02em" }}>{player.name}</div>
                 {player.inspiration && <span title="Inspiração" style={{ fontSize: "1.2rem" }}>🌟</span>}
               </div>
               <div style={{ fontSize: "1rem", color: "var(--accent-primary)", fontWeight: 700, marginTop: "4px" }}>
-                {player.classLevel || 'Sem classe'} <span style={{ color: "var(--text-muted)", fontWeight: "normal" }}>•</span> {player.race || 'Sem raça'}
+                {player.playerClass || player.classLevel || 'Sem classe'}{player.playerLevel ? ` Nv. ${player.playerLevel}` : ''} <span style={{ color: "var(--text-muted)", fontWeight: "normal" }}>•</span> {player.race || 'Sem raça'}
               </div>
               {player.playerName && (
                 <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: "4px" }}>
@@ -165,11 +165,15 @@ export default function PlayerDetailModal({ isOpen, onClose, player }: { isOpen:
                     player.attacks.length > 0 ? (
                       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                         {player.attacks.map((atk: any, idx: number) => (
-                          <div key={idx} style={{ display: "flex", justifyContent: "space-between", background: "rgba(255,255,255,0.05)", borderRadius: "6px", padding: "8px 12px", alignItems: "center" }}>
-                            <div style={{ fontWeight: 800, fontSize: "0.9rem", color: "#fff" }}>{atk.name || 'Ataque'}</div>
-                            <div style={{ display: "flex", gap: "15px", fontSize: "0.85rem" }}>
-                              <span style={{ color: "var(--accent-primary)", fontWeight: 700 }}>{atk.bonus || '--'}</span>
-                              <span style={{ color: "var(--text-muted)" }}>{atk.dmg || '--'}</span>
+                          <div key={idx} style={{ display: "flex", background: "rgba(255,255,255,0.05)", borderRadius: "6px", padding: "8px 12px", alignItems: "center", fontSize: "0.9rem" }}>
+                            <div style={{ width: "45%", fontWeight: 800, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {atk.name ? atk.name.charAt(0).toUpperCase() + atk.name.slice(1) : 'Ataque'}
+                            </div>
+                            <div style={{ width: "20%", textAlign: "center", color: "var(--accent-primary)", fontWeight: 700 }}>
+                              {atk.bonus || '--'}
+                            </div>
+                            <div style={{ width: "35%", textAlign: "right", color: "var(--text-muted)" }}>
+                              {atk.dmg || '--'}
                             </div>
                           </div>
                         ))}

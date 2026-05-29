@@ -3,9 +3,11 @@
 import { useAppContext } from "@/contexts/AppContext";
 import { blocosDeTempo } from "@/lib/gameData";
 import DashboardBlock from "./DashboardBlock";
+import { useSystemDialog } from "@/contexts/SystemDialogContext";
 
 export default function DashboardView() {
   const { diaAtual, setDiaAtual, indiceBlocoAtivo, setIndiceBlocoAtivo, jornadaPorDia, setModals, dadosGlobais, setActiveData } = useAppContext();
+  const { showConfirm } = useSystemDialog();
 
   const handleExportLog = () => {
     let rel = "RELATÓRIO DE CAMPANHA\n\n";
@@ -45,8 +47,8 @@ export default function DashboardView() {
     a.click();
   };
 
-  const handleResetCampaign = () => {
-    if (window.confirm("Apagar todos os dados da campanha e voltar ao Dia 1? Isso não pode ser desfeito.")) {
+  const handleResetCampaign = async () => {
+    if (await showConfirm({ title: "Resetar Campanha", message: "Apagar todos os dados da campanha e voltar ao Dia 1? Isso não pode ser desfeito.", type: "danger" })) {
       localStorage.removeItem("myrpg_dia_atual");
       localStorage.removeItem("myrpg_bloco_ativo");
       localStorage.removeItem("myrpg_dados_globais");

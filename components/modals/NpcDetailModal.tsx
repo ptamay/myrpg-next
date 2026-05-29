@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Modal from "../ui/Modal";
 import { useAppContext } from "../../contexts/AppContext";
+import { useSystemDialog } from "../../contexts/SystemDialogContext";
 
 interface NpcDetailModalProps {
   isOpen: boolean;
@@ -13,9 +14,10 @@ interface NpcDetailModalProps {
 export default function NpcDetailModal({ isOpen, onClose, npc }: NpcDetailModalProps) {
   const [activeTab, setActiveTab] = useState("tab-combat");
   const { setModals, setActiveData, dadosGlobais, setDadosGlobais, salvarEstadoLocal } = useAppContext();
+  const { showConfirm } = useSystemDialog();
 
-  const handleDelete = () => {
-    if (window.confirm(`Tem certeza que deseja excluir o NPC "${npc.name}" permanentemente?`)) {
+  const handleDelete = async () => {
+    if (await showConfirm({ title: "Excluir NPC", message: `Tem certeza que deseja excluir o NPC "${npc.name}" permanentemente?`, type: "danger" })) {
       const newNpcs = dadosGlobais.npcs.filter((n: any) => n.id !== npc.id);
       setDadosGlobais({ ...dadosGlobais, npcs: newNpcs });
       setTimeout(salvarEstadoLocal, 100);

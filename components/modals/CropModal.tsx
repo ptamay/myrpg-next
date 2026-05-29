@@ -8,9 +8,10 @@ interface CropModalProps {
   onClose: () => void;
   imageUrl?: string | null;
   onCrop?: (base64: string) => void;
+  aspectRatio?: number;
 }
 
-export default function CropModal({ isOpen, onClose, imageUrl, onCrop }: CropModalProps) {
+export default function CropModal({ isOpen, onClose, imageUrl, onCrop, aspectRatio }: CropModalProps) {
   const imageRef = useRef<HTMLImageElement>(null);
   const cropperRef = useRef<any>(null);
 
@@ -22,7 +23,7 @@ export default function CropModal({ isOpen, onClose, imageUrl, onCrop }: CropMod
         }
         imageRef.current.src = imageUrl;
         cropperRef.current = new (window as any).Cropper(imageRef.current, {
-          aspectRatio: 1,
+          aspectRatio: aspectRatio !== undefined ? aspectRatio : 1,
           viewMode: 1,
           autoCropArea: 1,
           background: false
@@ -36,11 +37,20 @@ export default function CropModal({ isOpen, onClose, imageUrl, onCrop }: CropMod
         cropperRef.current = null;
       }
     };
-  }, [isOpen, imageUrl]);
+  }, [isOpen, imageUrl, aspectRatio]);
 
   const handleConfirm = () => {
     if (cropperRef.current && onCrop) {
-      const canvas = cropperRef.current.getCroppedCanvas({ width: 256, height: 256 });
+      const canvasOptions: any = {};
+      const actualRatio = aspectRatio !== undefined ? aspectRatio : 1;
+      if (actualRatio !== 1) {
+        canvasOptions.width = 600;
+        canvasOptions.height = Math.round(600 / actualRatio);
+      } else {
+        canvasOptions.width = 256;
+        canvasOptions.height = 256;
+      }
+      const canvas = cropperRef.current.getCroppedCanvas(canvasOptions);
       if (canvas) {
         const base64 = canvas.toDataURL("image/jpeg", 0.85);
         onCrop(base64);

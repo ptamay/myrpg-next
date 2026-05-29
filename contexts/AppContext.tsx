@@ -27,6 +27,7 @@ interface AppContextData {
     npcDetail: boolean;
     playerForm: boolean;
     playerManage: boolean;
+    playerDetail: boolean;
     passDay: boolean;
     globalEvent: boolean;
     globalEventDetail: boolean;
@@ -68,6 +69,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     npcDetail: false,
     playerForm: false,
     playerManage: false,
+    playerDetail: false,
     passDay: false,
     globalEvent: false,
     globalEventDetail: false,

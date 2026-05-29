@@ -3,6 +3,7 @@
 import React from "react";
 import Modal from "../ui/Modal";
 import { useAppContext } from "@/contexts/AppContext";
+import { useSystemDialog } from "@/contexts/SystemDialogContext";
 
 interface PassDayModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface PassDayModalProps {
 
 export default function PassDayModal({ isOpen, onClose }: PassDayModalProps) {
   const { diaAtual, setDiaAtual, setIndiceBlocoAtivo, dadosGlobais, setDadosGlobais, jornadaPorDia, setJornadaPorDia, salvarEstadoLocal } = useAppContext();
+  const { showAlert } = useSystemDialog();
   
   const activePeople = dadosGlobais.food?.people || 0;
   const rate = dadosGlobais.food?.consumptionRate || 1;
@@ -23,7 +25,7 @@ export default function PassDayModal({ isOpen, onClose }: PassDayModalProps) {
     return sleepHours < minSleep / 2;
   });
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     // Check sleep and apply exhaustion
     let sleepAlerts: string[] = [];
     const newPlayers = [...(dadosGlobais.players || [])].map((p: any) => {
@@ -44,7 +46,7 @@ export default function PassDayModal({ isOpen, onClose }: PassDayModalProps) {
     });
 
     if (sleepAlerts.length > 0) {
-      alert("⚠️ AVISOS DE EXAUSTÃO:\n\n" + sleepAlerts.join("\n"));
+      await showAlert({ title: "Avisos de Exaustão", message: sleepAlerts.join("\n"), type: "warning" });
     }
 
     // Debitar suprimentos
