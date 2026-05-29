@@ -12,7 +12,7 @@ interface NpcFormModalProps {
 }
 
 export default function NpcFormModal({ isOpen, onClose }: NpcFormModalProps) {
-  const { dadosGlobais, setDadosGlobais, salvarEstadoLocal, activeData } = useAppContext();
+  const { dadosGlobais, setDadosGlobais, salvarEstadoLocal, activeData, setModals } = useAppContext();
   const { showConfirm, showAlert } = useSystemDialog();
   
   const [hasSpells, setHasSpells] = useState(false);

@@ -90,7 +90,7 @@ export default function NpcCard({ npc, combatMode, hideEffects }: NpcCardProps) 
 
   return (
     <div className={`npc-card glass-panel ${combatMode ? "combat-expanded" : ""} ${npc.isDead ? "is-dead" : ""} ${factionBorder}`} style={npc.isHidden ? { opacity: 0.5 } : {}}>
-      {/* Dead overlay removed per user request */}
+      {npc.isDead && <div className="status-dead-overlay">💀</div>}
       
       <button className="btn-quick-hide" title={npc.isHidden ? 'Mostrar NPC' : 'Ocultar NPC'} onClick={toggleHide}>
         {npc.isHidden ? (

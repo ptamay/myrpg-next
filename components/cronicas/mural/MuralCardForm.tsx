@@ -62,7 +62,7 @@ export default function MuralCardForm({ initialData, onSave, onCancel }: MuralCa
         onClick={onCancel} 
       />
       
-      <div className="glass-panel" style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: "450px", padding: "1.5rem" }}>
+      <div className="glass-panel" style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: "450px", padding: "1.5rem", background: "#0b0b0f" }}>
         <h3 className="section-title" style={{ marginBottom: "1.5rem" }}>
           {initialData ? "Editar Card" : "Novo Card"}
         </h3>

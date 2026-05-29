@@ -4,6 +4,8 @@ import { DiaryEntry } from "@/types/cronicas";
 import { useSystemDialog } from "@/contexts/SystemDialogContext";
 import CropModal from "@/components/modals/CropModal";
 
+import { useDiario } from "@/hooks/useGameData";
+
 interface DiarioEntryFormProps {
   defaultAuthorId: string;
   defaultAuthorName: string;
@@ -13,7 +15,11 @@ interface DiarioEntryFormProps {
 }
 
 export default function DiarioEntryForm({ defaultAuthorId, defaultAuthorName, initialEntry, onSubmit, onCancel }: DiarioEntryFormProps) {
-  const [sessionNumber, setSessionNumber] = useState<number | "">(initialEntry ? initialEntry.sessionNumber : "");
+  const { entries } = useDiario();
+  const maxSession = entries.length > 0 ? Math.max(...entries.map(e => e.sessionNumber)) : 0;
+  const sessionOptions = Array.from({ length: maxSession + 1 }, (_, i) => i + 1).reverse();
+  
+  const [sessionNumber, setSessionNumber] = useState<number | "">(initialEntry ? initialEntry.sessionNumber : (sessionOptions[0] || 1));
   const [sessionTitle, setSessionTitle] = useState(initialEntry ? initialEntry.sessionTitle : "");
   const [content, setContent] = useState(initialEntry ? initialEntry.content : "");
   const [imageUrl, setImageUrl] = useState<string | undefined>(initialEntry ? initialEntry.imageUrl : undefined);
@@ -61,14 +67,16 @@ export default function DiarioEntryForm({ defaultAuthorId, defaultAuthorName, in
       <div className="diario-form-row">
         <div>
           <label className="narrative-label">Nº DA SESSÃO</label>
-          <input 
-            type="number" 
+          <select 
             className="journey-input modern-input" 
             style={{ width: "100%", marginTop: "4px" }}
             value={sessionNumber}
-            onChange={e => setSessionNumber(e.target.value ? Number(e.target.value) : "")}
-            placeholder="Ex: 14"
-          />
+            onChange={e => setSessionNumber(Number(e.target.value))}
+          >
+            {sessionOptions.map(num => (
+              <option key={num} value={num}>Sessão {num}</option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="narrative-label">TÍTULO (OPCIONAL)</label>

@@ -12,6 +12,7 @@ export default function DiarioFeed() {
   const [showForm, setShowForm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [showSessionMenu, setShowSessionMenu] = useState(false);
+  const [activeDividerMenu, setActiveDividerMenu] = useState<number | null>(null);
   const ITEMS_PER_PAGE = 10;
 
   // Pagination
@@ -105,7 +106,7 @@ export default function DiarioFeed() {
 
       {/* Feed */}
       <div className="scrollable-area no-scrollbar" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <div style={{ width: "100%", maxWidth: "700px" }}>
+        <div style={{ width: "100%", maxWidth: "900px" }}>
           {entries.length === 0 && (
             <div className="empty-state">
               <p>Nenhum registro ainda.</p>
@@ -116,9 +117,33 @@ export default function DiarioFeed() {
             <div key={sessionNum} style={{ marginBottom: "2rem" }}>
               {/* Divider de sessão */}
               <div id={`session-divider-${sessionNum}`} className="diario-session-divider">
-                <span className="narrative-label">
-                  Sessão {sessionNum}
-                </span>
+                <div 
+                  style={{ position: "relative", display: "inline-block" }}
+                  onMouseLeave={() => setActiveDividerMenu(null)}
+                >
+                  <button 
+                    className="narrative-label"
+                    style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.25rem", padding: 0 }}
+                    onClick={() => setActiveDividerMenu(activeDividerMenu === Number(sessionNum) ? null : Number(sessionNum))}
+                  >
+                    Sessão {sessionNum} ▾
+                  </button>
+                  {activeDividerMenu === Number(sessionNum) && (
+                    <div style={{ position: "absolute", left: 0, top: "100%", marginTop: "0.25rem", background: "var(--bg-card)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-sm)", padding: "0.25rem", zIndex: 100, display: "flex", flexDirection: "column", gap: "0.25rem", minWidth: "120px", maxHeight: "200px", overflowY: "auto", boxShadow: "0 4px 10px rgba(0,0,0,0.5)" }} className="no-scrollbar">
+                      {sessionsList.map(sNum => (
+                        <button 
+                          key={sNum}
+                          style={{ background: "none", border: "none", color: "var(--text-secondary)", textAlign: "left", fontSize: "0.85rem", padding: "0.5rem 0.75rem", cursor: "pointer", display: "block", width: "100%", transition: "color 0.2s", borderRadius: "var(--radius-sm)" }} 
+                          onClick={() => { setActiveDividerMenu(null); handleGoToSession(sNum); }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = "var(--text-primary)"}
+                          onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}
+                        >
+                          Sessão {sNum}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="diario-session-divider-line" />
               </div>
               

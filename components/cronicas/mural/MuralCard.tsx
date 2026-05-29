@@ -37,6 +37,7 @@ export default function MuralCard({ card, zoom, pan, isConnecting, canEdit, onCa
 
   const npc = card.type === 'npc' && card.refId ? dadosGlobais.npcs.find((n: any) => n.id === card.refId) : null;
   const player = card.type === 'jogador' && card.refId ? dadosGlobais.players.find((p: any) => p.id === card.refId) : null;
+  const isDead = !!(npc?.isDead || player?.isDead);
 
   // Calcula a posição atualizada com o transform do drag ativo
   const x = card.position.x * zoom + pan.x + (transform?.x || 0);
@@ -75,9 +76,26 @@ export default function MuralCard({ card, zoom, pan, isConnecting, canEdit, onCa
           cursor: canEdit ? "grab" : "default",
           boxShadow: isConnecting ? "0 0 0 2px var(--accent-primary)" : "none",
           animation: isConnecting ? "dayPulse 1.5s infinite" : "none",
-          opacity: isDragging ? 0.8 : 1,
+          opacity: isDragging ? 0.8 : (isDead ? 0.6 : 1),
+          filter: isDead ? "grayscale(100%)" : "none",
+          transition: "filter 0.3s, opacity 0.3s, transform 0.3s",
+          position: "relative",
         }}
       >
+        {isDead && isHovered && (
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "3.5rem",
+            zIndex: 5,
+            pointerEvents: "none",
+          }}>
+            💀
+          </div>
+        )}
         <div className="narrative-label" style={{ marginBottom: 4 }}>
           {card.type.toUpperCase()}
         </div>
@@ -114,7 +132,7 @@ export default function MuralCard({ card, zoom, pan, isConnecting, canEdit, onCa
         )}
 
         {isHovered && canEdit && (
-          <div style={{ position: "absolute", top: 4, right: 4, display: "flex", gap: 4, background: "var(--bg-card)", borderRadius: "4px", padding: 2, boxShadow: "0 2px 4px rgba(0,0,0,0.5)" }}>
+          <div style={{ position: "absolute", top: 4, right: 4, display: "flex", gap: 4, background: "var(--bg-card)", borderRadius: "4px", padding: 2, boxShadow: "0 2px 4px rgba(0,0,0,0.5)", zIndex: 10 }}>
             <button className="ghost-delete-btn" style={{ opacity: 1, padding: "4px" }} onClick={(e) => { e.stopPropagation(); onEdit?.(); }}>✏️</button>
             <button className="ghost-delete-btn" style={{ opacity: 1, padding: "4px", color: "var(--danger)" }} onClick={(e) => { e.stopPropagation(); onDelete?.(); }}>🗑️</button>
           </div>
