@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Modal from "../ui/Modal";
 import { useAppContext } from "@/contexts/AppContext";
 import { useSystemDialog } from "@/contexts/SystemDialogContext";
+import { useUserSession } from "@/contexts/UserSessionContext";
 
 const SAVES_MAP = [
   { key: "FOR", attr: "str" },
@@ -43,6 +44,7 @@ interface SessionPlayerModalProps {
 export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerModalProps) {
   const { diaAtual, jornadaPorDia, setJornadaPorDia, activeData, setActiveData, setModals, dadosGlobais, setDadosGlobais, salvarEstadoLocal } = useAppContext();
   const { showAlert, showConfirm } = useSystemDialog();
+  const { isGM } = useUserSession();
 
   const [acoes, setAcoes] = useState<any[]>([]);
   const [concluido, setConcluido] = useState(false);
@@ -187,7 +189,7 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
 
     if (activeData.blocoIndex !== undefined) {
       const blocoIndex = activeData.blocoIndex;
-      const newJornada = { ...jornadaPorDia };
+      const newJornada = JSON.parse(JSON.stringify(jornadaPorDia));
       const blocos = newJornada[diaAtual].blocos;
       
       if (!blocos[blocoIndex].playerSessions) {
@@ -253,7 +255,7 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
     let newTimeCost = newAcoes[index].timeCost || 60;
     if (field === 'timeCost') {
       newTimeCost = Number(value);
-    } else if (field === 'type' && value === 'Cozinhar') {
+    } else if (field === 'type' && value === 'Cozinhando') {
       newTimeCost = 60;
     }
 
@@ -265,7 +267,7 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
       return;
     }
 
-    if (field === 'type' && value === 'Cozinhar') {
+    if (field === 'type' && value === 'Cozinhando') {
       newAcoes[index] = { ...newAcoes[index], [field]: value, timeCost: 60 };
     } else {
       newAcoes[index] = { ...newAcoes[index], [field]: value };
@@ -513,6 +515,7 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
                 {[0, 1, 2, 3, 4, 5, 6].map(level => (
                   <button 
                     key={level}
+                    disabled={!isGM}
                     onClick={() => handleExhaustionChange(level)}
                     style={{ 
                       flex: 1, 
@@ -522,7 +525,8 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
                       background: (player.exhaustionLevel || 0) === level ? "rgba(239, 68, 68, 0.2)" : "transparent",
                       color: (player.exhaustionLevel || 0) === level ? "#fff" : "var(--text-muted)",
                       borderRadius: "6px",
-                      cursor: "pointer",
+                      cursor: isGM ? "pointer" : "default",
+                      opacity: !isGM && (player.exhaustionLevel || 0) !== level ? 0.4 : 1,
                       fontWeight: "bold"
                     }}
                   >
@@ -552,17 +556,19 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
                 </h3>
                 
                 <div style={{ marginBottom: "20px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px", background: "rgba(0,0,0,0.2)", padding: "12px 16px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.05)" }}>
-                    <div style={{ display: "flex", flexDirection: "column" }}>
-                      <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#fff", display: "flex", alignItems: "center", gap: "8px" }}>
-                        Tempo Restante no Bloco
-                        <button onClick={handleResetBloco} title="Resetar Tempo do Bloco" style={{ background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.4)", color: "#fca5a5", borderRadius: "4px", fontSize: "0.6rem", padding: "2px 6px", cursor: "pointer", fontWeight: 700, textTransform: "uppercase" }}>Resetar</button>
-                      </span>
-                      <span style={{ fontSize: "0.85rem", color: remainingTimeMinutes < 0 ? "var(--danger)" : "var(--success)", fontWeight: 700 }}>
-                        {Math.floor(Math.abs(remainingTimeMinutes) / 60)}h {Math.abs(remainingTimeMinutes) % 60}m {remainingTimeMinutes < 0 ? 'excedido' : 'disponíveis'}
-                      </span>
-                    </div>
-                    <div style={{ textAlign: "right", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                  <div style={{ display: "flex", justifyContent: isGM ? "space-between" : "center", alignItems: "center", marginBottom: "15px", background: "rgba(0,0,0,0.2)", padding: "12px 16px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    {isGM && (
+                      <div style={{ display: "flex", flexDirection: "column" }}>
+                        <span style={{ fontSize: "0.9rem", fontWeight: "bold", color: "#fff", display: "flex", alignItems: "center", gap: "8px" }}>
+                          Tempo Restante no Bloco
+                          <button onClick={handleResetBloco} title="Resetar Tempo do Bloco" style={{ background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.4)", color: "#fca5a5", borderRadius: "4px", fontSize: "0.6rem", padding: "2px 6px", cursor: "pointer", fontWeight: 700, textTransform: "uppercase" }}>Resetar</button>
+                        </span>
+                        <span style={{ fontSize: "0.85rem", color: remainingTimeMinutes < 0 ? "var(--danger)" : "var(--success)", fontWeight: 700 }}>
+                          {Math.floor(Math.abs(remainingTimeMinutes) / 60)}h {Math.abs(remainingTimeMinutes) % 60}m {remainingTimeMinutes < 0 ? 'excedido' : 'disponíveis'}
+                        </span>
+                      </div>
+                    )}
+                    <div style={{ textAlign: isGM ? "right" : "center", display: "flex", flexDirection: "column", justifyContent: "center", width: isGM ? "auto" : "100%" }}>
                       <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600 }}>Total de Sono Hoje: <strong style={{ color: "var(--text-primary)" }}>{totalSleepHours}h</strong> <span style={{fontSize: "0.7rem"}}>/ {player.minSleepReq || 8}h mín</span></div>
                     </div>
                   </div>
@@ -572,7 +578,7 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
                       <span style={{ fontSize: "0.85rem", color: "#a7f3d0", fontWeight: 600 }}>✓ {acao.type !== 'Livre / Outro' ? acao.type : acao.text}</span>
                       <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 700 }}>-{acao.timeCost}m</span>
                     </div>
-                  ) : (
+                  ) : isGM ? (
                     <div key={acao.id || i} style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "12px", background: "rgba(59, 130, 246, 0.05)", padding: "12px", borderRadius: "8px", border: "1px solid rgba(59, 130, 246, 0.2)" }}>
                       <div style={{ fontSize: "0.7rem", color: "#93c5fd", fontWeight: 800, textTransform: "uppercase", marginBottom: "-4px" }}>Ação Ativa</div>
                       <div style={{ display: "flex", gap: "8px" }}>
@@ -580,9 +586,8 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
                           <option value="Dormindo / Descanso">💤 Dormindo / Descanso</option>
                           <option value="De Guarda / Vigiando">🛡️ De Guarda / Vigiando</option>
                           <option value="Explorando / Investigando">🗺️ Explorando / Investigando</option>
-                          <option value="Cozinhar">🍳 Cozinhar</option>
+                          <option value="Cozinhando">🍳 Cozinhando</option>
                           <option value="Consertando navio">🛠️ Consertando navio</option>
-                          <option value="Viajando / Deslocamento">🐎 Viajando / Deslocamento</option>
                           <option value="Ofício / Preparação">⚒️ Ofício / Preparação</option>
                           <option value="Livre / Outro">🎲 Livre / Outro</option>
                         </select>
@@ -593,7 +598,7 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
                       </div>
                       <div style={{ display: "flex", gap: "15px", alignItems: "center", marginTop: "4px" }}>
                         <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: "bold" }}>Tempo investido:</span>
-                        {acao.type === 'Cozinhar' ? (
+                        {acao.type === 'Cozinhando' ? (
                           <span style={{ fontSize: "0.85rem", color: "#10b981", fontWeight: 700, padding: "4px 8px", background: "rgba(16, 185, 129, 0.1)", borderRadius: "4px", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
                             1 Hora (Fixo)
                           </span>
@@ -610,10 +615,10 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
                         )}
                       </div>
                     </div>
-                  ))}
+                  ) : null)}
                   {acoes.length === 0 && <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", textAlign: "center", padding: "10px 0" }}>Nenhuma ação registrada neste bloco.</p>}
                   
-                  {!acoes.some(a => !a.concluida) && (
+                  {isGM && !acoes.some(a => !a.concluida) && (
                     <button className="btn secondary-btn" onClick={handleAddAcao} style={{ width: "100%", marginTop: "10px", padding: "10px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", borderStyle: "dashed" }}>
                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                        Adicionar Ação ao Bloco
@@ -628,8 +633,14 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
         <footer className="modal-footer" style={{ borderTop: "1px solid rgba(255,255,255,0.05)", background: "rgba(0,0,0,0.2)", display: "flex", justifyContent: "space-between" }}>
           <div></div>
           <div style={{ display: "flex", gap: "10px" }}>
-            <button className="btn secondary-btn" onClick={onClose}>Cancelar</button>
-            <button className="btn primary-btn" onClick={handleSaveDmControls}>Salvar Alterações</button>
+            {isGM ? (
+              <>
+                <button className="btn secondary-btn" onClick={onClose}>Cancelar</button>
+                <button className="btn primary-btn" onClick={handleSaveDmControls}>Salvar Alterações</button>
+              </>
+            ) : (
+              <button className="btn primary-btn" onClick={onClose}>Fechar</button>
+            )}
           </div>
         </footer>
       </div>

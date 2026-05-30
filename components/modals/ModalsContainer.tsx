@@ -13,6 +13,7 @@ import { NpcImportTextModal, NpcImportOptionsModal } from "./ImportModals";
 import SummaryCardModal from "./SummaryCardModal";
 import SessionPlayerModal from "./SessionPlayerModal";
 import PlayerDetailModal from "./PlayerDetailModal";
+import PersonalNoteModal, { PersonalNoteDetailModal } from "./PersonalNoteModal";
 
 export default function ModalsContainer() {
   const { modals, setModals, activeData, diaAtual, jornadaPorDia, indiceBlocoAtivo } = useAppContext();
@@ -66,6 +67,9 @@ export default function ModalsContainer() {
       <SummaryCardModal isOpen={modals.summaryCard} onClose={() => close("summaryCard")} />
       
       <SessionPlayerModal isOpen={modals.sessionPlayer} onClose={() => close("sessionPlayer")} />
+
+      <PersonalNoteModal isOpen={modals.personalNote} onClose={() => close("personalNote")} />
+      <PersonalNoteDetailModal isOpen={modals.personalNoteDetail} onClose={() => close("personalNoteDetail")} />
     </>
   );
 }

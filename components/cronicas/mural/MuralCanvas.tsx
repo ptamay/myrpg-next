@@ -6,7 +6,6 @@ import { useUserSession } from "@/contexts/UserSessionContext";
 import { useAppContext } from "@/contexts/AppContext";
 import { useSystemDialog } from "@/contexts/SystemDialogContext";
 import { Mural } from "@/types/cronicas";
-import { mockMural } from "@/lib/cronicasData";
 import MuralCard from "./MuralCard";
 import MuralConnectionLayer from "./MuralConnectionLayer";
 import MuralToolbar from "./MuralToolbar";
@@ -14,10 +13,12 @@ import MuralCardForm from "./MuralCardForm";
 import { toPng } from "html-to-image";
 
 export default function MuralCanvas() {
-  const { murais, save } = useMurais();
-  const { isGM } = useUserSession();
+  const { murais, loading, save } = useMurais();
+  const { isGM, session } = useUserSession();
   const { dadosGlobais } = useAppContext();
   const { showAlert, showConfirm } = useSystemDialog();
+
+  const canEdit = isGM || !!session?.playerId;
 
   const [activeMuralId, setActiveMuralId] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
@@ -75,8 +76,7 @@ export default function MuralCanvas() {
   
   const muralRef = useRef<HTMLDivElement>(null);
 
-  // We temporarily use mockMural if no mural exists so we can see something
-  const mural = murais.find(m => m.id === activeMuralId) ?? (murais.length === 0 ? mockMural : null);
+  const mural = murais.find(m => m.id === activeMuralId) ?? null;
 
   // Sincroniza localPositions quando o mural muda externamente (carregamento inicial)
   useEffect(() => {
@@ -134,7 +134,7 @@ export default function MuralCanvas() {
   }, [save]);
 
   const handleDragEnd = (event: DragEndEvent) => {
-    if (!mural || !isGM) return;
+    if (!mural || !canEdit) return;
     const { active, delta } = event;
     if (delta.x === 0 && delta.y === 0) return;
 
@@ -215,6 +215,16 @@ export default function MuralCanvas() {
     })
   );
 
+  if (loading) {
+    return (
+      <div style={{display: 'flex', height: '100%', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', gap: '1rem'}}>
+        <div className="spinner" style={{width: '40px', height: '40px', border: '3px solid var(--border-subtle)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite'}}></div>
+        <p style={{color: 'var(--text-secondary)'}}>Carregando investigações...</p>
+        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
   if (!mural && !activeMuralId) {
     return (
       <div className="empty-state" style={{ height: "100%", margin: "1.5rem" }}>
@@ -239,8 +249,8 @@ export default function MuralCanvas() {
 
   return (
     <div className="mural-wrapper">
-      {/* Toolbar lateral — só GM */}
-      {isGM && (
+      {/* Toolbar lateral */}
+      {canEdit && (
         <MuralToolbar
           onAddCard={() => setShowCardForm(true)}
           zoom={zoom}
@@ -276,15 +286,15 @@ export default function MuralCanvas() {
                 if (isSaved) {
                   setActiveMuralId(slotId);
                 } else {
-                  // Salva o atual no slot vazio
-                  const baseMural = mural || {
-                    id: crypto.randomUUID(),
-                    name: "Investigação",
-                    cards: [], connections: [],
+                  // Cria um mural novo e vazio no slot
+                  const newMural: Mural = {
+                    id: slotId,
+                    name: `Investigação ${slot}`,
+                    cards: [], 
+                    connections: [],
                     createdAt: new Date().toISOString(),
                     backgroundStyle: 'grid'
                   };
-                  const newMural = { ...baseMural, id: slotId, name: `Investigação ${slot}` };
                   save(newMural);
                   setActiveMuralId(slotId);
                 }
@@ -292,8 +302,22 @@ export default function MuralCanvas() {
               onContextMenu={async (e) => {
                 e.preventDefault();
                 if (!mural) return;
-                if (await showConfirm({ title: "Sobrescrever Slot", message: `Deseja sobrescrever a Investigação ${slot} com o estado atual?`, type: "warning" })) {
-                  const newMural = { ...mural, id: slotId, name: `Investigação ${slot}` };
+                if (await showConfirm({ title: "Sobrescrever Slot", message: `Deseja clonar a investigação atual para o slot ${slot}? (O slot atual permanecerá intacto)`, type: "warning" })) {
+                  const idMap = new Map<string, string>();
+                  const newCards = mural.cards.map(c => {
+                    const newId = crypto.randomUUID();
+                    idMap.set(c.id, newId);
+                    return { ...c, id: newId, muralId: slotId };
+                  });
+                  const newConns = mural.connections.map(c => ({
+                    ...c,
+                    id: crypto.randomUUID(),
+                    muralId: slotId,
+                    fromCardId: idMap.get(c.fromCardId) || c.fromCardId,
+                    toCardId: idMap.get(c.toCardId) || c.toCardId
+                  }));
+                  
+                  const newMural = { ...mural, id: slotId, name: `Investigação ${slot}`, cards: newCards, connections: newConns };
                   save(newMural);
                   setActiveMuralId(slotId);
                 }
@@ -340,7 +364,7 @@ export default function MuralCanvas() {
             connections={visibleConnections}
             zoom={zoom}
             pan={pan}
-            canEdit={isGM}
+            canEdit={canEdit}
             onDeleteConnection={(id) => {
               if (!mural) return;
               const updated = { ...mural, connections: mural.connections.filter(c => c.id !== id) };
@@ -360,9 +384,9 @@ export default function MuralCanvas() {
               zoom={zoom}
               pan={pan}
               isConnecting={connectingFrom === card.id}
-              canEdit={isGM}
+              canEdit={canEdit}
               onCardClick={() => {
-                if (!isGM || !mural) return;
+                if (!canEdit || !mural) return;
                 if (connectingFrom === "") {
                   setConnectingFrom(card.id);
                 } else if (connectingFrom && connectingFrom !== card.id) {

@@ -1,7 +1,11 @@
 export type UserRole = 'gm' | 'player';
 
 export interface UserSession {
+  id: string;
+  name: string;
+  email: string;
   role: UserRole;
-  characterId?: string;    // ID em dadosGlobais.players — só para 'player'
-  characterName?: string;  // Cache do nome para exibição
+  playerId?: string;
+  avatarUrl?: string;
+  isOnline?: boolean;
 }

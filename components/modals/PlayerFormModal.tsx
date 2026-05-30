@@ -5,6 +5,7 @@ import Modal from "../ui/Modal";
 import CropModal from "./CropModal";
 import { useAppContext } from "@/contexts/AppContext";
 import { useSystemDialog } from "@/contexts/SystemDialogContext";
+import { createClient } from "@/lib/supabase/client";
 
 interface PlayerFormModalProps {
   isOpen: boolean;
@@ -35,6 +36,9 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
   const [isImporting, setIsImporting] = useState(false);
   const importFileInputRef = useRef<HTMLInputElement>(null);
 
+  const [profiles, setProfiles] = useState<any[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
+
   useEffect(() => {
     if (isOpen) {
       setAvatarBase64(activeData?.image || null);
@@ -59,6 +63,22 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
       setSelectedSkills(initialSkills);
 
       setProfBonusState(activeData?.profBonus || "2");
+
+      const fetchProfiles = async () => {
+        const supabase = createClient();
+        const { data } = await supabase.from('profiles').select('id, display_name, email, player_id');
+        if (data) {
+          setProfiles(data);
+          if (activeData?.id) {
+            const linkedProfile = data.find(p => p.player_id === activeData.id);
+            if (linkedProfile) setSelectedUserId(linkedProfile.id);
+            else setSelectedUserId("");
+          } else {
+            setSelectedUserId("");
+          }
+        }
+      };
+      fetchProfiles();
     }
   }, [isOpen, activeData]);
 
@@ -175,7 +195,7 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
     }
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
@@ -199,10 +219,22 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
     }
     const attacks = formAttacks;
 
+    const supabase = createClient();
+    
+    if (selectedUserId) {
+      await supabase.from('profiles').update({ player_id: null }).eq('player_id', id);
+      await supabase.from('profiles').update({ player_id: id }).eq('id', selectedUserId);
+    } else {
+      await supabase.from('profiles').update({ player_id: null }).eq('player_id', id);
+    }
+
+    const selectedProfile = profiles.find(p => p.id === selectedUserId);
+    const resolvedPlayerName = selectedProfile ? (selectedProfile.display_name || selectedProfile.email) : "";
+
     const playerData = {
       id,
       name: formData.get("name"),
-      playerName: formData.get("playerName"),
+      playerName: resolvedPlayerName,
       playerClass: formData.get("playerClass"),
       playerLevel: parseInt(formData.get("playerLevel") as string) || 1,
       race: formData.get("race"),
@@ -275,7 +307,7 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
             </button>
           </div>
         </header>
-        <form onSubmit={handleSubmit} className="modal-body custom-scrollbar">
+        <form key={isOpen ? (activeData?.id || 'new') : 'closed'} onSubmit={handleSubmit} className="modal-body custom-scrollbar">
           <div className="form-grid-layout">
             <div className="form-col-avatar">
               <div className="avatar-upload" id="player-avatar-upload-area" onClick={() => fileInputRef.current?.click()} style={{ cursor: "pointer" }}>
@@ -301,8 +333,19 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
                   <input type="text" name="name" className="journey-input" required defaultValue={activeData?.name || ""} />
                 </div>
                 <div className="form-group flex-2">
-                  <label>Nome do Jogador</label>
-                  <input type="text" name="playerName" className="journey-input" defaultValue={activeData?.playerName || ""} />
+                  <label>Usuário do Jogador</label>
+                  <select 
+                    className="journey-input" 
+                    value={selectedUserId} 
+                    onChange={(e) => setSelectedUserId(e.target.value)}
+                  >
+                    <option value="">Nenhum (Controle do Mestre)</option>
+                    {profiles.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.display_name || p.email}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div className="form-row mt-2">

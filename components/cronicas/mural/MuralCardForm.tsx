@@ -20,14 +20,33 @@ export default function MuralCardForm({ initialData, onSave, onCancel }: MuralCa
   const [refId, setRefId] = useState(initialData?.refId || "");
   const [imageUrl, setImageUrl] = useState<string | undefined>(initialData?.imageUrl);
 
-  // Se mudar o tipo para npc ou jogador, tentar setar o primeiro da lista
+  // Se mudar o tipo para npc ou jogador, tentar setar o primeiro da lista correspondente
   useEffect(() => {
-    if (type === 'npc' && !refId && dadosGlobais.npcs?.length > 0) {
-      setRefId(dadosGlobais.npcs[0].id);
-    } else if (type === 'jogador' && !refId && dadosGlobais.players?.length > 0) {
-      setRefId(dadosGlobais.players[0].id);
+    if (type === 'npc') {
+      const exists = dadosGlobais.npcs?.some((n: any) => n.id === refId);
+      if (!exists && dadosGlobais.npcs?.length > 0) {
+        const firstNpc = dadosGlobais.npcs[0];
+        setRefId(firstNpc.id);
+        const isPlayerName = dadosGlobais.players?.some((p: any) => p.name === title);
+        if (!title.trim() || isPlayerName) {
+          setTitle(firstNpc.name);
+        }
+      }
+    } else if (type === 'jogador') {
+      const exists = dadosGlobais.players?.some((p: any) => p.id === refId);
+      if (!exists && dadosGlobais.players?.length > 0) {
+        const firstPlayer = dadosGlobais.players[0];
+        setRefId(firstPlayer.id);
+        const isNpcName = dadosGlobais.npcs?.some((n: any) => n.name === title);
+        if (!title.trim() || isNpcName) {
+          setTitle(firstPlayer.name);
+        }
+      }
+    } else {
+      // Para outros tipos (nota, teoria, etc), limpa o refId
+      setRefId("");
     }
-  }, [type, refId, dadosGlobais.npcs, dadosGlobais.players]);
+  }, [type, refId, dadosGlobais.npcs, dadosGlobais.players, title]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -95,7 +114,7 @@ export default function MuralCardForm({ initialData, onSave, onCancel }: MuralCa
                 onChange={(e) => {
                   setRefId(e.target.value);
                   const n = dadosGlobais.npcs.find((x: any) => x.id === e.target.value);
-                  if (n && !title) setTitle(n.name);
+                  if (n && (!title || dadosGlobais.npcs.some((x: any) => x.name === title))) setTitle(n.name);
                 }}
               >
                 {dadosGlobais.npcs?.map((n: any) => (
@@ -115,7 +134,7 @@ export default function MuralCardForm({ initialData, onSave, onCancel }: MuralCa
                 onChange={(e) => {
                   setRefId(e.target.value);
                   const p = dadosGlobais.players.find((x: any) => x.id === e.target.value);
-                  if (p && !title) setTitle(p.name);
+                  if (p && (!title || dadosGlobais.players.some((x: any) => x.name === title))) setTitle(p.name);
                 }}
               >
                 {dadosGlobais.players?.map((p: any) => (

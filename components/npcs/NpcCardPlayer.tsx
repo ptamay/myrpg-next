@@ -1,13 +1,22 @@
 "use client";
 import React from "react";
+import { useAppContext } from "@/contexts/AppContext";
 
 interface NpcCardPlayerProps {
   npc: any;
 }
 
 export default function NpcCardPlayer({ npc }: NpcCardPlayerProps) {
+  const { setModals, setActiveData } = useAppContext();
+
+  const openDetail = () => {
+    setActiveData(npc);
+    setModals((prev: any) => ({ ...prev, summaryCard: true }));
+  };
+
   return (
-    <div className="npc-card glass-panel" style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1rem" }}>
+    <div className={`npc-card glass-panel clickable-card ${npc.isDead ? "is-dead" : ""}`} onClick={openDetail} style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1rem", cursor: "pointer" }}>
+      {npc.isDead && <div className="status-dead-overlay">💀</div>}
       
       {/* HEADER */}
       <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
@@ -15,19 +24,19 @@ export default function NpcCardPlayer({ npc }: NpcCardPlayerProps) {
           <img 
             src={npc.image} 
             alt={npc.name} 
-            style={{ width: "80px", height: "80px", borderRadius: "50%", objectFit: "cover", border: "2px solid var(--border-bright)" }} 
+            style={{ width: "80px", height: "80px", borderRadius: "50%", objectFit: "cover", border: "2px solid var(--border-bright)", filter: npc.isDead ? "grayscale(100%)" : "none" }} 
           />
         ) : (
-          <div style={{ width: "80px", height: "80px", borderRadius: "50%", background: "var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", fontWeight: "bold" }}>
+          <div style={{ width: "80px", height: "80px", borderRadius: "50%", background: "var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", fontWeight: "bold", filter: npc.isDead ? "grayscale(100%)" : "none" }}>
             {npc.name.charAt(0)}
           </div>
         )}
         
-        <div>
-          <h3 style={{ fontSize: "1.2rem", fontWeight: 800, margin: 0, color: "var(--text-primary)" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3 style={{ fontSize: "1.2rem", fontWeight: 800, margin: 0, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {npc.name}
           </h3>
-          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: 0 }}>
+          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {npc.title} {npc.title && npc.faction ? '·' : ''} {npc.faction}
           </p>
         </div>
@@ -46,7 +55,7 @@ export default function NpcCardPlayer({ npc }: NpcCardPlayerProps) {
 
         {npc.itemsVis && (
           <div>
-            <span className="narrative-label">◆ INTENÇÕES VISÍVEIS</span>
+            <span className="narrative-label">◆ ITENS VISÍVEIS</span>
             <div className="narrative-text">{npc.itemsVis}</div>
           </div>
         )}

@@ -34,6 +34,12 @@ export interface Player {
   attacks: { name: string; bonus: string; dmg: string }[];
   image?: string;
   isDead: boolean;
+  saves?: string[];
+  skills?: string[];
+  profBonus?: string;
+  minSleepReq?: number;
+  isSleepingAction?: boolean;
+  exhaustionLevel?: number;
 }
 
 export interface Npc {

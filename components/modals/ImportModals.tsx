@@ -4,6 +4,7 @@ import React from "react";
 import Modal from "../ui/Modal";
 import { useAppContext } from "@/contexts/AppContext";
 import { useSystemDialog } from "@/contexts/SystemDialogContext";
+import { useState } from "react";
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -12,6 +13,8 @@ interface ImportModalProps {
 
 export function NpcImportTextModal({ isOpen, onClose }: ImportModalProps) {
   const { showAlert } = useSystemDialog();
+  const { setActiveData, setModals } = useAppContext();
+  const [text, setText] = useState("");
   const templateStr = `Nome: \nTítulo/Ocupação: \nFacção (ally/neutral/enemy): \nRaça: \nAlinhamento: \nND: \nPV Máx: \nCA: \nDeslocamento: \nIniciativa: \nPercepção: \nFOR: 10\nDES: 10\nCON: 10\nINT: 10\nSAB: 10\nCAR: 10\nAtaque Principal: \nResistências: \nImunidades: \nAções (Livre): \nMotivações: \nSegredos: \nTraços: \nItens Visíveis: \nItens Ocultos: \nNotas Extras: \nMagias Diárias: 1º[0] 2º[0] 3º[0] 4º[0] 5º[0] 6º[0] 7º[0] 8º[0] 9º[0]`;
 
   const handleCopyTemplate = async () => {
@@ -20,6 +23,64 @@ export function NpcImportTextModal({ isOpen, onClose }: ImportModalProps) {
       showAlert({ title: "Copiado", message: "Template copiado para a área de transferência.", type: "success" });
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleProcess = () => {
+    try {
+      const lines = text.split("\n");
+      const data: any = {};
+      lines.forEach((line) => {
+        const [rawKey, ...rest] = line.split(":");
+        if (!rawKey || rest.length === 0) return;
+        const key = rawKey.trim().toLowerCase();
+        const value = rest.join(":").trim();
+        
+        if (key === "nome") data.name = value;
+        if (key === "título/ocupação" || key.includes("ocupação") || key.includes("título")) data.title = value;
+        if (key.includes("facção")) data.faction = value;
+        if (key === "raça") data.race = value;
+        if (key === "alinhamento") data.alignment = value;
+        if (key === "nd") data.cr = value;
+        if (key === "pv máx" || key === "pv") data.hpMax = parseInt(value) || 0;
+        if (key === "ca") data.ac = value;
+        if (key === "deslocamento") data.speed = value;
+        if (key === "iniciativa") data.init = value;
+        if (key === "percepção") data.perc = value;
+        if (key === "for") data.str = parseInt(value) || 10;
+        if (key === "des") data.dex = parseInt(value) || 10;
+        if (key === "con") data.con = parseInt(value) || 10;
+        if (key === "int") data.int = parseInt(value) || 10;
+        if (key === "sab") data.wis = parseInt(value) || 10;
+        if (key === "car") data.cha = parseInt(value) || 10;
+        if (key === "ataque principal") data.mainAttack = value;
+        if (key === "resistências") data.res = value;
+        if (key === "imunidades") data.imm = value;
+        if (key.includes("ações")) data.actions = value;
+        if (key === "motivações") data.mot = value;
+        if (key === "segredos") data.sec = value;
+        if (key === "traços") data.traits = value;
+        if (key === "itens visíveis") data.itemsVis = value;
+        if (key === "itens ocultos") data.itemsHid = value;
+        if (key === "notas extras") data.notes = value;
+        if (key === "magias diárias") {
+          data.hasSpells = true;
+          data.spellSlots = {};
+          const slots = value.split(" ");
+          slots.forEach(slot => {
+            const match = slot.match(/(\d+)º\[(\d+)\]/);
+            if (match) {
+               data.spellSlots[parseInt(match[1])] = parseInt(match[2]);
+            }
+          });
+        }
+      });
+      setActiveData(data);
+      onClose();
+      setModals((prev: any) => ({ ...prev, npcForm: true }));
+      showAlert({ title: "Sucesso", message: "Ficha pré-preenchida com sucesso!", type: "success" });
+    } catch (e) {
+      showAlert({ title: "Erro", message: "Não foi possível processar o texto.", type: "danger" });
     }
   };
 
@@ -46,11 +107,13 @@ export function NpcImportTextModal({ isOpen, onClose }: ImportModalProps) {
             className="journey-input form-textarea" 
             style={{ minHeight: "300px", fontSize: "0.85rem" }} 
             placeholder="Cole aqui a ficha do NPC..."
+            value={text}
+            onChange={(e) => setText(e.target.value)}
           ></textarea>
         </div>
         <footer className="modal-footer">
           <button className="btn danger-btn" onClick={onClose}>Cancelar</button>
-          <button className="btn primary-btn">Processar e Preencher</button>
+          <button className="btn primary-btn" onClick={handleProcess}>Processar e Preencher</button>
         </footer>
       </div>
     </Modal>

@@ -1,12 +1,14 @@
 "use client";
 
 import { useAppContext } from "@/contexts/AppContext";
+import { useUserSession } from "@/contexts/UserSessionContext";
 import { blocosDeTempo } from "@/lib/gameData";
 import DashboardBlock from "./DashboardBlock";
 import { useSystemDialog } from "@/contexts/SystemDialogContext";
 
 export default function DashboardView() {
   const { diaAtual, setDiaAtual, indiceBlocoAtivo, setIndiceBlocoAtivo, jornadaPorDia, setModals, dadosGlobais, setActiveData } = useAppContext();
+  const { isGM } = useUserSession();
   const { showConfirm } = useSystemDialog();
 
   const handleExportLog = () => {
@@ -57,7 +59,30 @@ export default function DashboardView() {
     }
   };
 
-  const daysArray = Array.from({ length: Math.max(6, diaAtual) }, (_, i) => i + 1);
+  const maxDayInJornada = Object.keys(jornadaPorDia).length > 0 ? Math.max(...Object.keys(jornadaPorDia).map(Number)) : 0;
+  const totalDays = Math.max(6, diaAtual, maxDayInJornada);
+  const daysArray = Array.from({ length: totalDays }, (_, i) => i + 1);
+
+  const handleAddDay = () => {
+    const nextDay = totalDays + 1;
+    setJornadaPorDia((prev: any) => {
+      const updated = { ...prev };
+      if (!updated[nextDay]) {
+        const { getInitialJornada } = require("@/lib/dataHelpers");
+        const initial = getInitialJornada();
+        updated[nextDay] = initial[1]; // Usa o dia 1 como template
+        
+        // Propaga o clima do último dia conhecido
+        const lastKnownWeather = prev[totalDays]?.blocos?.[0]?.weatherEffect || "clear";
+        if (updated[nextDay].blocos) {
+          updated[nextDay].blocos.forEach((b: any) => {
+            b.weatherEffect = lastKnownWeather;
+          });
+        }
+      }
+      return updated;
+    });
+  };
 
   // Função para desenhar a navbar do dia/bloco
   return (
@@ -70,20 +95,26 @@ export default function DashboardView() {
               {daysArray.map((d) => (
                 <button
                   key={d}
-                  className={`day-btn ${d === diaAtual ? "active" : ""}`}
-                  onClick={() => setDiaAtual(d)}
+                  className={`day-btn ${d === diaAtual ? "active" : ""} ${!isGM ? "disabled" : ""}`}
+                  onClick={() => isGM && setDiaAtual(d)}
                 >
                   {d}
                 </button>
               ))}
+              {isGM && (
+                <button className="day-btn add-day-btn" onClick={handleAddDay} title="Adicionar Dia Extra">
+                  +
+                </button>
+              )}
             </div>
           </div>
           <div className="dash-stepper" id="moment-selector">
             {blocosDeTempo.map((b, i) => (
               <button
                 key={b.id}
-                className={`moment-btn ${i === indiceBlocoAtivo ? "active" : ""}`}
-                onClick={() => setIndiceBlocoAtivo(i)}
+                className={`moment-btn ${i === indiceBlocoAtivo ? "active" : ""} ${!isGM ? "disabled" : ""}`}
+                onClick={() => isGM && setIndiceBlocoAtivo(i)}
+                style={{ cursor: isGM ? "pointer" : "default" }}
               >
                 <span className="moment-dot"></span>
                 {b.nome}
@@ -91,26 +122,22 @@ export default function DashboardView() {
             ))}
           </div>
           <div className="dash-header-actions">
-            <button id="btn-pass-day" className="btn primary-btn" onClick={() => setModals((prev: any) => ({ ...prev, passDay: true }))}>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-              <span>Passar o Dia</span>
-            </button>
-            <button id="btn-save-day" className="btn secondary-btn" onClick={handleExportLog}>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-              <span>Exportar Log</span>
-            </button>
-            <button id="btn-new-day" className="btn danger-btn" title="Resetar Campanha" onClick={handleResetCampaign}>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 6h18"></path>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              </svg>
-            </button>
+            {isGM && (
+              <button id="btn-pass-day" className="btn primary-btn" onClick={() => setModals((prev: any) => ({ ...prev, passDay: true }))}>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+                <span>Passar o Dia</span>
+              </button>
+            )}
+            {isGM && (
+              <button id="btn-new-day" className="btn danger-btn" title="Resetar Campanha" onClick={handleResetCampaign}>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 6h18"></path>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            )}
           </div>
         </header>
 

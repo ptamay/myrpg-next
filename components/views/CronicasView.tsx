@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DiarioFeed from "../cronicas/diario/DiarioFeed";
 import MuralCanvas from "../cronicas/mural/MuralCanvas";
 
@@ -7,6 +7,15 @@ type CronicasTab = "diario" | "mural";
 
 export default function CronicasView() {
   const [activeTab, setActiveTab] = useState<CronicasTab>("diario");
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash === "#mural") {
+      setActiveTab("mural");
+    } else if (hash === "#diario") {
+      setActiveTab("diario");
+    }
+  }, []);
 
   const tabs: { id: CronicasTab; label: string }[] = [
     { id: "diario", label: "Diário de Bordo" },

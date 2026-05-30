@@ -4,15 +4,29 @@ import { useState, useEffect } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import { getAllMapsFromDB, saveMapToDB, deleteMapFromDB } from "@/hooks/useIndexedDB";
 import { useSystemDialog } from "@/contexts/SystemDialogContext";
+import { useUserSession } from "@/contexts/UserSessionContext";
+import { createClient } from "@/lib/supabase/client";
 
 export default function MapsView() {
   const { dadosGlobais, setDadosGlobais, salvarEstadoLocal } = useAppContext();
   const { showConfirm } = useSystemDialog();
+  const { isGM } = useUserSession();
   const [mapsLoaded, setMapsLoaded] = useState<{id: string, name: string, data: string}[]>([]);
   const [currentMapIndex, setCurrentMapIndex] = useState(0);
 
   useEffect(() => {
     loadMaps();
+
+    const supabase = createClient();
+    const channel = supabase.channel("maps_sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "maps" }, () => {
+        loadMaps();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadMaps = async () => {
@@ -66,19 +80,21 @@ export default function MapsView() {
       <header className="npc-header glass-panel">
         <div className="npc-header-info">
           <h1 className="view-title">Mapas e Níveis</h1>
-          <p className="view-subtitle">Faça o upload e gerencie os mapas da sua campanha.</p>
+          <p className="view-subtitle">{isGM ? "Faça o upload e gerencie os mapas da sua campanha." : "Explore os cenários da campanha."}</p>
         </div>
-        <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-          <input type="file" accept="image/*" multiple className="hidden" id="input-map-upload" onChange={handleFileUpload} />
-          <label htmlFor="input-map-upload" className="btn primary-btn" style={{ cursor: "pointer" }}>
-            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
-            <span>Adicionar Mapas</span>
-          </label>
-        </div>
+        {isGM && (
+          <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+            <input type="file" accept="image/*" multiple className="hidden" id="input-map-upload" onChange={handleFileUpload} />
+            <label htmlFor="input-map-upload" className="btn primary-btn" style={{ cursor: "pointer" }}>
+              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span>Adicionar Mapas</span>
+            </label>
+          </div>
+        )}
       </header>
 
       <div className="maps-carousel-wrapper" style={{ flex: 1, display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem", height: "calc(100vh - 150px)", maxHeight: "100%", overflow: "hidden", position: "relative" }}>
@@ -133,7 +149,7 @@ export default function MapsView() {
             </svg>
           </button>
 
-          {mapsLoaded.length > 0 && (
+          {isGM && mapsLoaded.length > 0 && (
             <button 
               className="btn danger-btn icon-only" 
               onClick={handleDelete}

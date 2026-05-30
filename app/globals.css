@@ -373,6 +373,12 @@ body.theme-noturna .particle {
     background: hsla(0, 0%, 100%, 0.05);
 }
 
+.nav-tab.logout-btn:hover {
+    color: var(--danger);
+    background: hsla(0, 84%, 60%, 0.1);
+    border-color: hsla(0, 84%, 60%, 0.15);
+}
+
 .nav-tab:hover svg {
     transform: translateY(-2px);
 }
@@ -1455,7 +1461,7 @@ body.theme-noturna .particle {
 
 .npc-cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
     gap: 1.5rem;
     padding: 8px 8px 2rem 8px;
 }
@@ -2813,8 +2819,6 @@ body.theme-noturna .particle {
 
 /* NPC View Layout */
 .npc-view-container {
-    max-width: 1300px;
-    margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 2rem;
@@ -5243,7 +5247,7 @@ body.hide-combat-effects .npc-card-combat-console {
 
 .timeline-container {
     position: relative;
-    padding-left: 1.5rem;
+    padding-left: 0.6rem;
     margin-top: 1rem;
 }
 
@@ -5261,9 +5265,12 @@ body.hide-combat-effects .npc-card-combat-console {
 .timeline-item {
     position: relative;
     display: flex;
-    gap: 1.5rem;
+    gap: 1.25rem;
     margin-bottom: 2rem;
     z-index: 2;
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
 }
 
 .timeline-avatar-wrapper {
@@ -5288,10 +5295,10 @@ body.hide-combat-effects .npc-card-combat-console {
 
 .timeline-card {
     flex: 1;
-    background: var(--bg-card);
+    background: rgba(10, 10, 10, 0.7);
     border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-    padding: 1rem;
+    border-radius: 16px;
+    padding: 1.5rem 2rem;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     position: relative;
     max-width: 100%;

@@ -1,22 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import Sidebar from "./Sidebar";
-import DashboardView from "../views/DashboardView";
-import NpcsView from "../views/NpcsView";
-import SettingsView from "../views/SettingsView";
-import FoodView from "../views/FoodView";
-import PlayersView from "../views/PlayersView";
-import MapsView from "../views/MapsView";
-import CronicasView from "../views/CronicasView";
 import BackgroundEffects from "./BackgroundEffects";
 import ModalsContainer from "../modals/ModalsContainer";
 import { useAppContext } from "@/contexts/AppContext";
 import { blocosDeTempo } from "@/lib/gameData";
+import { useAuth } from "@/contexts/AuthContext";
 
-export default function AppShell() {
-  const [activeView, setActiveView] = useState("view-dashboard");
+export default function AppShell({ children }: { children: React.ReactNode }) {
   const { diaAtual, indiceBlocoAtivo, jornadaPorDia } = useAppContext();
+  const { loading } = useAuth();
 
   const getActiveWeather = () => {
     const dayData = jornadaPorDia[diaAtual];
@@ -45,33 +39,15 @@ export default function AppShell() {
     }
   }, [indiceBlocoAtivo]);
 
+  if (loading) return null;
+
   return (
     <>
       <BackgroundEffects weatherEffect={getActiveWeather()} />
       <div className={`app-shell ${getThemeClass()}`}>
-        <Sidebar activeView={activeView} setActiveView={setActiveView} />
+        <Sidebar />
         <div className="content-area">
-          <div style={{ display: activeView === "view-dashboard" ? "block" : "none", height: "100%" }}>
-            <DashboardView />
-          </div>
-          <div style={{ display: activeView === "view-npcs" ? "block" : "none", height: "100%" }}>
-            <NpcsView />
-          </div>
-          <div style={{ display: activeView === "view-settings" ? "block" : "none", height: "100%" }}>
-            <SettingsView />
-          </div>
-          <div style={{ display: activeView === "view-food" ? "block" : "none", height: "100%" }}>
-            <FoodView />
-          </div>
-          <div style={{ display: activeView === "view-players" ? "block" : "none", height: "100%" }}>
-            <PlayersView />
-          </div>
-          <div style={{ display: activeView === "view-maps" ? "block" : "none", height: "100%" }}>
-            <MapsView />
-          </div>
-          <div style={{ display: activeView === "view-cronicas" ? "block" : "none", height: "100%" }}>
-            <CronicasView />
-          </div>
+          {children}
         </div>
         <ModalsContainer />
       </div>

@@ -112,7 +112,7 @@ export default function DiarioEntryCard({
         <div className="timeline-post-block" onClick={() => setShowDetailModal(true)}>
           <div className="timeline-header">
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <span className="timeline-author">{entry.authorName}</span>
+              <span className="timeline-author">{player ? player.name : entry.authorName}</span>
               <span className="timeline-meta">{getTempoAtras(entry.createdAt)}</span>
             </div>
             {canDelete && (
@@ -218,7 +218,7 @@ export default function DiarioEntryCard({
                 )}
               </div>
               <div style={{ display: "flex", flexDirection: "column" }}>
-                <span className="timeline-author" style={{ fontSize: "1rem" }}>{entry.authorName}</span>
+                <span className="timeline-author" style={{ fontSize: "1rem" }}>{player ? player.name : entry.authorName}</span>
                 <span className="timeline-meta" style={{ fontSize: "0.75rem" }}>{getTempoAtras(entry.createdAt)}</span>
               </div>
             </div>
