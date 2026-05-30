@@ -323,7 +323,7 @@ BEGIN
     new.id,
     new.email,
     new.raw_user_meta_data->>'display_name',
-    COALESCE(new.raw_user_meta_data->>'role', 'gm'), -- Default GM, ou player se convidado
+    COALESCE(new.raw_user_meta_data->>'role', 'player'), -- Default player, ou player se convidado
     new.raw_user_meta_data->>'player_id'
   );
   RETURN new;
