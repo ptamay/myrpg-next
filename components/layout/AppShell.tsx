@@ -105,18 +105,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className={`app-shell ${getThemeClass()}`}>
         <Sidebar />
         <div className="content-area">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={pathname}
-              initial={{ opacity: 0, y: 15, filter: "blur(5px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, y: -15, filter: "blur(5px)" }}
-              transition={{ duration: 0.4, ease: "easeInOut" }}
-              style={{ height: "100%", display: "flex", flexDirection: "column" }}
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: 15, filter: "blur(5px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+            style={{ height: "100%", display: "flex", flexDirection: "column" }}
+          >
+            {children}
+          </motion.div>
         </div>
         <ModalsContainer />
       </div>
