@@ -25,9 +25,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        const { data: { user } } = await supabase.auth.getUser();
         setSession(session);
-        setUser(session?.user || null);
-        setIsAuthenticated(!!session);
+        setUser(user || null);
+        setIsAuthenticated(!!user);
       } catch (error) {
         console.error("Erro ao verificar sessão Supabase:", error);
       } finally {

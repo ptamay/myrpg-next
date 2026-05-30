@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useUserSession } from "@/contexts/UserSessionContext";
+import { useSystemDialog } from "@/contexts/SystemDialogContext";
 
 export default function FoodView() {
   const { dadosGlobais, setDadosGlobais, salvarEstadoLocal } = useAppContext();
   const { isGM } = useUserSession();
+  const { showConfirm } = useSystemDialog();
   const [activeTab, setActiveTab] = useState("food-panel");
 
   const [adjustType, setAdjustType] = useState<"water"|"food"|"both">("water");
@@ -14,8 +16,8 @@ export default function FoodView() {
   const [adjustAmount, setAdjustAmount] = useState<number | "">("");
   const [adjustReason, setAdjustReason] = useState("");
 
-  const [setWater, setSetWater] = useState<number | "">(dadosGlobais.food?.water || 0);
-  const [setFood, setSetFood] = useState<number | "">(dadosGlobais.food?.food || 0);
+  const [manualWater, setManualWater] = useState<number | "">(dadosGlobais.food?.water || 0);
+  const [manualFood, setManualFood] = useState<number | "">(dadosGlobais.food?.food || 0);
 
   const [peopleAmount, setPeopleAmount] = useState(dadosGlobais.food?.people || 0);
   const [consumptionRate, setConsumptionRate] = useState<number>(dadosGlobais.food?.consumptionRate || 1);
@@ -33,8 +35,8 @@ export default function FoodView() {
        if (adjustType === "both" || adjustType === "food") {
           newFood = adjustOperation === "add" ? newFood + amount : Math.max(0, newFood - amount);
        }
-       setSetWater(newWater);
-       setSetFood(newFood);
+       setManualWater(newWater);
+       setManualFood(newFood);
        
        const newHistoryEntry = {
          id: Date.now(),
@@ -59,11 +61,21 @@ export default function FoodView() {
       ...prev,
       food: {
         ...prev.food,
-        water: setWater === "" ? (prev.food?.water || 0) : Number(setWater),
-        food: setFood === "" ? (prev.food?.food || 0) : Number(setFood)
+        water: manualWater === "" ? (prev.food?.water || 0) : Number(manualWater),
+        food: manualFood === "" ? (prev.food?.food || 0) : Number(manualFood)
       }
     }));
     setTimeout(salvarEstadoLocal, 100);
+  };
+
+  const handleClearHistory = async () => {
+    if (await showConfirm({ title: "Limpar Histórico", message: "Tem certeza que deseja limpar todo o histórico de transações?", type: "danger" })) {
+      setDadosGlobais((prev: any) => ({
+        ...prev,
+        food: { ...prev.food, history: [] }
+      }));
+      setTimeout(salvarEstadoLocal, 100);
+    }
   };
 
   const handleSetPeople = () => {
@@ -76,8 +88,8 @@ export default function FoodView() {
       const nextWater = Math.max(0, currentWater - waterNeeds);
       const nextFood = Math.max(0, currentFood - foodNeeds);
 
-      setSetWater(nextWater);
-      setSetFood(nextFood);
+      setManualWater(nextWater);
+      setManualFood(nextFood);
 
       return {
         ...prev,
@@ -109,7 +121,7 @@ export default function FoodView() {
           <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: "0.15rem 0 0 0" }}>Histórico de consumo diário e ajustes.</p>
         </div>
         {isGM && (
-          <button className="btn danger-btn small-btn" style={{ padding: "0.4rem 1rem", fontSize: "0.75rem" }}>Limpar Histórico</button>
+          <button className="btn danger-btn small-btn" onClick={handleClearHistory} style={{ padding: "0.4rem 1rem", fontSize: "0.75rem" }}>Limpar Histórico</button>
         )}
       </div>
       <div className="history-table-wrapper" style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
@@ -223,11 +235,11 @@ export default function FoodView() {
                 <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", alignItems: "center" }}>
                   <div className="supply-input-wrapper">
                     <span style={{ fontSize: "1.1rem" }}>💧</span>
-                    <input type="number" className="supply-input-field" min="0" placeholder="Água" value={setWater} onFocus={(e) => e.target.select()} onKeyDown={(e) => { if (e.key === 'Enter') handleSetBoth(); }} onChange={(e) => setSetWater(e.target.value ? Number(e.target.value) : "")} />
+                    <input type="number" className="supply-input-field" min="0" placeholder="Água" value={manualWater} onFocus={(e) => e.target.select()} onKeyDown={(e) => { if (e.key === 'Enter') handleSetBoth(); }} onChange={(e) => setManualWater(e.target.value ? Number(e.target.value) : "")} />
                   </div>
                   <div className="supply-input-wrapper">
                     <span style={{ fontSize: "1.1rem" }}>🍖</span>
-                    <input type="number" className="supply-input-field" min="0" placeholder="Comida" value={setFood} onFocus={(e) => e.target.select()} onKeyDown={(e) => { if (e.key === 'Enter') handleSetBoth(); }} onChange={(e) => setSetFood(e.target.value ? Number(e.target.value) : "")} />
+                    <input type="number" className="supply-input-field" min="0" placeholder="Comida" value={manualFood} onFocus={(e) => e.target.select()} onKeyDown={(e) => { if (e.key === 'Enter') handleSetBoth(); }} onChange={(e) => setManualFood(e.target.value ? Number(e.target.value) : "")} />
                   </div>
                   <button className="btn" onClick={handleSetBoth} style={{ flex: 0.8, height: "42px", fontSize: "0.85rem", background: "#8b5cf6", color: "#fff", fontWeight: 700, borderRadius: "8px" }}>Salvar</button>
                 </div>

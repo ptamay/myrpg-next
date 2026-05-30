@@ -295,6 +295,8 @@ CREATE POLICY "diary_all_read" ON diary_entries FOR SELECT TO authenticated USIN
 CREATE POLICY "diary_all_insert" ON diary_entries FOR INSERT TO authenticated WITH CHECK (TRUE);
 CREATE POLICY "diary_gm_update_delete" ON diary_entries FOR UPDATE TO authenticated USING ((SELECT role FROM profiles WHERE id = auth.uid()) = 'gm');
 CREATE POLICY "diary_gm_delete" ON diary_entries FOR DELETE TO authenticated USING ((SELECT role FROM profiles WHERE id = auth.uid()) = 'gm');
+CREATE POLICY "diary_player_update_own" ON diary_entries FOR UPDATE TO authenticated USING (author_id = (SELECT player_id FROM profiles WHERE id = auth.uid()));
+CREATE POLICY "diary_player_delete_own" ON diary_entries FOR DELETE TO authenticated USING (author_id = (SELECT player_id FROM profiles WHERE id = auth.uid()));
 
 -- Murals: Todos os autenticados (GM e jogadores) podem ler e escrever para permitir colaboração
 CREATE POLICY "murals_all_read" ON murals FOR SELECT TO authenticated USING (TRUE);

@@ -4,6 +4,7 @@ import React from "react";
 import Modal from "../ui/Modal";
 import { useAppContext } from "@/contexts/AppContext";
 import { useSystemDialog } from "@/contexts/SystemDialogContext";
+import { getInitialJornada } from "@/lib/dataHelpers";
 
 interface PassDayModalProps {
   isOpen: boolean;
@@ -68,7 +69,6 @@ export default function PassDayModal({ isOpen, onClose }: PassDayModalProps) {
     setJornadaPorDia((prev) => {
       const updated = { ...prev };
       if (!updated[nextDay]) {
-        const { getInitialJornada } = require("@/lib/dataHelpers");
         const initial = getInitialJornada();
         updated[nextDay] = initial[1]; // Usa o dia 1 como template
       }

@@ -15,6 +15,6 @@ export const config = {
      * - api (API routes, some might need auth, but we'll protect them individually if needed, or we can include them here)
      * Feel free to modify this pattern to include more paths.
      */
-    '/((?!_next/static|_next/image|auth/callback|api|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|auth/callback|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

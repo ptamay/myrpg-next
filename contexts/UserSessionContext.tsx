@@ -6,14 +6,11 @@ import { createClient } from "@/lib/supabase/client";
 
 interface UserSessionContextData {
   session: UserSession | null;
-  login: (session: UserSession) => void;
-  logout: () => void;
   isGM: boolean;
   isPlayer: boolean;
 }
 
 const UserSessionContext = createContext<UserSessionContextData>({} as UserSessionContextData);
-const SESSION_KEY = "myrpg_user_session";
 
 export function UserSessionProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<UserSession | null>(null);
@@ -49,20 +46,9 @@ export function UserSessionProvider({ children }: { children: React.ReactNode })
     fetchProfile();
   }, [user]);
 
-  const login = (s: UserSession) => {
-    // Agora o login é via Supabase. Esta função é mantida por compatibilidade 
-    // com algum mock antigo que possa existir, mas não faz nada efetivo.
-    console.warn("login() via UserSessionContext está obsoleto. Use a autenticação do Supabase.");
-  };
-
-  const logout = () => {
-    // Deslogar deve ser via AuthContext (Supabase).
-    console.warn("logout() via UserSessionContext está obsoleto. Use a autenticação do Supabase.");
-  };
-
   return (
     <UserSessionContext.Provider value={{
-      session, login, logout,
+      session,
       isGM: session?.role === 'gm',
       isPlayer: session?.role === 'player',
     }}>

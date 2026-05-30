@@ -4,35 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useUserSession } from "@/contexts/UserSessionContext";
 
-const SAVES_MAP = [
-  { key: "FOR", attr: "str" },
-  { key: "DES", attr: "dex" },
-  { key: "CON", attr: "con" },
-  { key: "INT", attr: "int" },
-  { key: "SAB", attr: "wis" },
-  { key: "CAR", attr: "cha" }
-];
-
-const SKILLS_MAP = [
-  { name: "Acrobacia", attr: "dex", label: "Acrobacia (Des)" },
-  { name: "Arcanismo", attr: "int", label: "Arcanismo (Int)" },
-  { name: "Atletismo", attr: "str", label: "Atletismo (For)" },
-  { name: "Atuação", attr: "cha", label: "Atuação (Car)" },
-  { name: "Enganação", attr: "cha", label: "Enganação (Car)" },
-  { name: "Furtividade", attr: "dex", label: "Furtividade (Des)" },
-  { name: "História", attr: "int", label: "História (Int)" },
-  { name: "Intimidação", attr: "cha", label: "Intimidação (Car)" },
-  { name: "Intuição", attr: "wis", label: "Intuição (Sab)" },
-  { name: "Investigação", attr: "int", label: "Investigação (Int)" },
-  { name: "Lidar c/ Animais", attr: "wis", label: "Lidar c/ Animais (Sab)" },
-  { name: "Medicina", attr: "wis", label: "Medicina (Sab)" },
-  { name: "Natureza", attr: "int", label: "Natureza (Int)" },
-  { name: "Percepção", attr: "wis", label: "Percepção (Sab)" },
-  { name: "Persuasão", attr: "cha", label: "Persuasão (Car)" },
-  { name: "Prestidigitação", attr: "dex", label: "Prestidigitação (Des)" },
-  { name: "Religião", attr: "int", label: "Religião (Int)" },
-  { name: "Sobrevivência", attr: "wis", label: "Sobrevivência (Sab)" }
-];
+import { SAVES_MAP, SKILLS_MAP } from "@/lib/dndConstants";
+import { Player } from "@/lib/gameData";
 
 export default function MeuPerfilView() {
   const { dadosGlobais, setDadosGlobais, salvarEstadoLocal } = useAppContext();
@@ -95,8 +68,8 @@ export default function MeuPerfilView() {
   };
 
   const profBonus = player.profBonus || "2";
-  const parsedSaves = Array.isArray(player.saves) ? player.saves : (typeof player.saves === 'string' && player.saves ? player.saves.split(',').map((s: string) => s.trim()) : []);
-  const parsedSkills = Array.isArray(player.skills) ? player.skills : (typeof player.skills === 'string' && player.skills ? player.skills.split(',').map((s: string) => s.trim()) : []);
+  const parsedSaves = Array.isArray(player.saves) ? player.saves : (typeof player.saves === 'string' && player.saves ? ((player.saves as any) as string).split(',').map((s: string) => s.trim()) : []);
+  const parsedSkills = Array.isArray(player.skills) ? player.skills : (typeof player.skills === 'string' && player.skills ? ((player.skills as any) as string).split(',').map((s: string) => s.trim()) : []);
 
   const hpPct = player.hpMax > 0 ? Math.max(0, Math.min(100, ((player.hpCurrent !== undefined ? player.hpCurrent : player.hpMax) / player.hpMax) * 100)) : 0;
   let hpColor = "#4ade80";
@@ -160,8 +133,8 @@ export default function MeuPerfilView() {
               {SAVES_MAP.map(attr => (
                 <div key={attr.key} style={{ background: "rgba(0,0,0,0.2)", padding: "0.5rem 0.25rem", borderRadius: "8px", textAlign: "center" }}>
                   <span style={{ display: "block", fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>{attr.key}</span>
-                  <span style={{ display: "block", fontSize: "1.5rem", fontWeight: 800, color: "var(--accent-primary)", margin: "2px 0" }}>{calcMod(player[attr.attr])}</span>
-                  <span style={{ display: "inline-block", fontSize: "0.75rem", color: "var(--text-secondary)", background: "rgba(0,0,0,0.3)", padding: "1px 6px", borderRadius: "10px" }}>{player[attr.attr] || 10}</span>
+                  <span style={{ display: "block", fontSize: "1.5rem", fontWeight: 800, color: "var(--accent-primary)", margin: "2px 0" }}>{calcMod((player as any)[attr.attr])}</span>
+                  <span style={{ display: "inline-block", fontSize: "0.75rem", color: "var(--text-secondary)", background: "rgba(0,0,0,0.3)", padding: "1px 6px", borderRadius: "10px" }}>{(player as any)[attr.attr] || 10}</span>
                 </div>
               ))}
             </div>
@@ -305,7 +278,7 @@ export default function MeuPerfilView() {
               <span style={{ fontSize: "0.75rem", fontWeight: 800, textTransform: "uppercase", color: "#8a8a8a", marginBottom: "0.5rem", display: "block" }}>Salvaguardas</span>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
                 {SAVES_MAP.map((sv) => {
-                  const baseVal = parseInt((player[sv.attr] || 10).toString());
+                  const baseVal = parseInt((((player as any)[sv.attr] as string | number) || 10).toString());
                   const mod = Math.floor((baseVal - 10) / 2);
                   const isProf = parsedSaves.some((s: string) => s.toLowerCase().trim() === sv.key.toLowerCase().trim());
                   const total = mod + (isProf ? parseInt(profBonus) : 0);
@@ -326,7 +299,7 @@ export default function MeuPerfilView() {
               <span style={{ fontSize: "0.75rem", fontWeight: 800, textTransform: "uppercase", color: "#8a8a8a", marginBottom: "0.5rem", display: "block" }}>Perícias</span>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: "12px", rowGap: "8px" }}>
                 {SKILLS_MAP.map((sk) => {
-                  const baseVal = parseInt((player[sk.attr] || 10).toString());
+                  const baseVal = parseInt((((player as any)[sk.attr] as string | number) || 10).toString());
                   const mod = Math.floor((baseVal - 10) / 2);
                   const isProf = parsedSkills.some((s: string) => s.toLowerCase().trim() === sk.label.toLowerCase().trim() || s.toLowerCase().trim() === sk.name.toLowerCase().trim());
                   const total = mod + (isProf ? parseInt(profBonus) : 0);

@@ -2,10 +2,25 @@
 
 import { useAppContext } from "@/contexts/AppContext";
 import { useSystemDialog } from "@/contexts/SystemDialogContext";
+import { useUserSession } from "@/contexts/UserSessionContext";
 
 export default function SettingsView() {
   const { diaAtual, indiceBlocoAtivo, jornadaPorDia, dadosGlobais } = useAppContext();
   const { showAlert, showConfirm } = useSystemDialog();
+  const { isGM } = useUserSession();
+
+  if (!isGM) {
+    return (
+      <div className="npc-view-container">
+        <header className="npc-header glass-panel">
+          <div className="npc-header-info">
+            <h1 className="view-title">Grimório de Dados</h1>
+            <p className="view-subtitle">Acesso restrito. Apenas o mestre pode exportar ou restaurar a campanha.</p>
+          </div>
+        </header>
+      </div>
+    );
+  }
 
   const handleExportFull = () => {
     const data = {

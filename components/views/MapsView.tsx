@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAppContext } from "@/contexts/AppContext";
-import { getAllMapsFromDB, saveMapToDB, deleteMapFromDB } from "@/hooks/useIndexedDB";
+import { getAllMapsFromDB, saveMapToDB, deleteMapFromDB } from "@/hooks/useMapStorage";
 import { useSystemDialog } from "@/contexts/SystemDialogContext";
 import { useUserSession } from "@/contexts/UserSessionContext";
 import { createClient } from "@/lib/supabase/client";
@@ -53,8 +53,7 @@ export default function MapsView() {
         if (mapsAdded === files.length) {
           loadMaps();
           // Atualiza globais para manter sincronia
-          const currentMapsIds = dadosGlobais.maps || [];
-          setDadosGlobais({ ...dadosGlobais, maps: [...currentMapsIds, "new_map"] }); // Just a trigger
+          setDadosGlobais({ ...dadosGlobais, mapsTrigger: Date.now() }); // Just a trigger
           setTimeout(salvarEstadoLocal, 100);
         }
       };
@@ -70,7 +69,7 @@ export default function MapsView() {
       await deleteMapFromDB(currentMap.id);
       setCurrentMapIndex(0);
       loadMaps();
-      setDadosGlobais({ ...dadosGlobais, maps: ["trigger_update"] });
+      setDadosGlobais({ ...dadosGlobais, mapsTrigger: Date.now() });
       setTimeout(salvarEstadoLocal, 100);
     }
   };

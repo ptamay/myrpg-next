@@ -3,36 +3,9 @@
 import React, { useState } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useSystemDialog } from "@/contexts/SystemDialogContext";
+import { useUserSession } from "@/contexts/UserSessionContext";
 
-const SAVES_MAP = [
-  { key: "FOR", attr: "str" },
-  { key: "DES", attr: "dex" },
-  { key: "CON", attr: "con" },
-  { key: "INT", attr: "int" },
-  { key: "SAB", attr: "wis" },
-  { key: "CAR", attr: "cha" }
-];
-
-const SKILLS_MAP = [
-  { name: "Acrobacia", attr: "dex", label: "Acrobacia (Des)" },
-  { name: "Arcanismo", attr: "int", label: "Arcanismo (Int)" },
-  { name: "Atletismo", attr: "str", label: "Atletismo (For)" },
-  { name: "Atuação", attr: "cha", label: "Atuação (Car)" },
-  { name: "Enganação", attr: "cha", label: "Enganação (Car)" },
-  { name: "Furtividade", attr: "dex", label: "Furtividade (Des)" },
-  { name: "História", attr: "int", label: "História (Int)" },
-  { name: "Intimidação", attr: "cha", label: "Intimidação (Car)" },
-  { name: "Intuição", attr: "wis", label: "Intuição (Sab)" },
-  { name: "Investigação", attr: "int", label: "Investigação (Int)" },
-  { name: "Lidar c/ Animais", attr: "wis", label: "Lidar c/ Animais (Sab)" },
-  { name: "Medicina", attr: "wis", label: "Medicina (Sab)" },
-  { name: "Natureza", attr: "int", label: "Natureza (Int)" },
-  { name: "Percepção", attr: "wis", label: "Percepção (Sab)" },
-  { name: "Persuasão", attr: "cha", label: "Persuasão (Car)" },
-  { name: "Prestidigitação", attr: "dex", label: "Prestidigitação (Des)" },
-  { name: "Religião", attr: "int", label: "Religião (Int)" },
-  { name: "Sobrevivência", attr: "wis", label: "Sobrevivência (Sab)" }
-];
+import { SAVES_MAP, SKILLS_MAP } from "@/lib/dndConstants";
 
 interface PlayerCardProps {
   player: any;
@@ -41,6 +14,7 @@ interface PlayerCardProps {
 export default function PlayerCard({ player }: PlayerCardProps) {
   const { dadosGlobais, setDadosGlobais, setModals, setActiveData, salvarEstadoLocal } = useAppContext();
   const { showConfirm } = useSystemDialog();
+  const { isGM } = useUserSession();
   const [skillsExpanded, setSkillsExpanded] = useState(false);
   const [attacksExpanded, setAttacksExpanded] = useState(false);
 
@@ -61,6 +35,7 @@ export default function PlayerCard({ player }: PlayerCardProps) {
 
   const removePlayer = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!isGM) return;
     if (await showConfirm({ title: "Remover Jogador", message: `Tem certeza que deseja excluir o jogador ${player.name}?`, type: "danger" })) {
       const newPlayers = dadosGlobais.players.filter((p: any) => p.id !== player.id);
       setDadosGlobais({ ...dadosGlobais, players: newPlayers });
@@ -119,18 +94,22 @@ export default function PlayerCard({ player }: PlayerCardProps) {
           </div>
         </div>
         <div className="npc-card-actions">
-          <button className="npc-card-action" onClick={(e) => { e.stopPropagation(); openDetail(); }} title="Editar">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 20h9"></path>
-              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-            </svg>
-          </button>
-          <button className="npc-card-action text-danger" onClick={removePlayer} title="Excluir">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
-          </button>
+          {isGM && (
+            <>
+              <button className="npc-card-action" onClick={(e) => { e.stopPropagation(); openDetail(); }} title="Editar">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 20h9"></path>
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                </svg>
+              </button>
+              <button className="npc-card-action text-danger" onClick={removePlayer} title="Excluir">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </>
+          )}
         </div>
       </div>
       

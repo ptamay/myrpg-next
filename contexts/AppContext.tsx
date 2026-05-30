@@ -2,15 +2,9 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useGameSync } from "@/hooks/useGameSync";
-import { blocosDeTempo, personagens } from "@/lib/gameData";
+import { getInitialJornada } from "@/lib/dataHelpers";
 
-export interface GlobalData {
-  npcs: any[];
-  players: any[];
-  plotPoints: any[];
-  food: { water: number; food: number; people: number };
-  maps: any[];
-}
+import { GlobalData } from "@/lib/gameData";
 
 // ... keeping AppContextData exact same
 
@@ -96,7 +90,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // Se já houver dados para o dia 1, consideramos que a jornada já foi inicializada
         if (prev[1] && prev[1].blocos) return prev;
         
-        const { getInitialJornada } = require("@/lib/dataHelpers");
         return getInitialJornada();
       });
     }

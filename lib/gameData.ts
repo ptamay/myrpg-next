@@ -40,6 +40,10 @@ export interface Player {
   minSleepReq?: number;
   isSleepingAction?: boolean;
   exhaustionLevel?: number;
+  sleepHoursToday?: number;
+  background?: string;
+  personalGoals?: string;
+  inventory?: string;
 }
 
 export interface Npc {
@@ -83,9 +87,9 @@ export interface Npc {
 export interface GlobalData {
   npcs: Npc[];
   players: Player[];
-  plotPoints: any[];
-  food: { water: number; food: number; people: number };
+  food: { water: number; food: number; people: number; consumptionRate?: number; history?: any[] };
   maps: any[];
+  mapsTrigger?: number;
 }
 
 export interface PlayerSession {
@@ -136,6 +140,6 @@ export interface JornadaBloco {
   timeline: TimelineEvent[];
   plots: Plot[];
   sidequests: SideQuest[];
-  acoesPersonagens: { nome: string; acoes: string[]; objetivos: string[]; concluido: boolean }[];
+  acoesPersonagens?: { nome: string; acoes: string[]; objetivos: string[]; concluido: boolean }[];
   playerSessions?: Record<string, PlayerSession>;
 }

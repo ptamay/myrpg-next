@@ -40,6 +40,10 @@ export default function GlobalEventModal({ isOpen, onClose }: GlobalEventModalPr
 
     const blocoIndex = activeData.blocoIndex;
     const newJornada = { ...jornadaPorDia };
+    newJornada[diaAtual] = { ...newJornada[diaAtual] };
+    newJornada[diaAtual].blocos = [...newJornada[diaAtual].blocos];
+    newJornada[diaAtual].blocos[blocoIndex] = { ...newJornada[diaAtual].blocos[blocoIndex] };
+    newJornada[diaAtual].blocos[blocoIndex].timeline = [...newJornada[diaAtual].blocos[blocoIndex].timeline];
     const timeline = newJornada[diaAtual].blocos[blocoIndex].timeline;
 
     if (activeData.topicIndex !== undefined) {
@@ -49,7 +53,6 @@ export default function GlobalEventModal({ isOpen, onClose }: GlobalEventModalPr
     }
 
     setJornadaPorDia(newJornada);
-    setTimeout(salvarEstadoLocal, 100);
     onClose();
   };
 
@@ -58,10 +61,13 @@ export default function GlobalEventModal({ isOpen, onClose }: GlobalEventModalPr
     
     const blocoIndex = activeData.blocoIndex;
     const newJornada = { ...jornadaPorDia };
+    newJornada[diaAtual] = { ...newJornada[diaAtual] };
+    newJornada[diaAtual].blocos = [...newJornada[diaAtual].blocos];
+    newJornada[diaAtual].blocos[blocoIndex] = { ...newJornada[diaAtual].blocos[blocoIndex] };
+    newJornada[diaAtual].blocos[blocoIndex].timeline = [...newJornada[diaAtual].blocos[blocoIndex].timeline];
     newJornada[diaAtual].blocos[blocoIndex].timeline.splice(activeData.topicIndex, 1);
 
     setJornadaPorDia(newJornada);
-    setTimeout(salvarEstadoLocal, 100);
     onClose();
   };
 

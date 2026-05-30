@@ -10,7 +10,6 @@ import { useRealtimeSync } from "./useRealtime";
 const defaultGlobalData: GlobalData = {
   npcs: [],
   players: [],
-  plotPoints: [],
   food: { water: 0, food: 0, people: 0 },
   maps: [],
 };
@@ -152,7 +151,6 @@ export function useGameSync() {
         setDadosGlobaisLocal({
           npcs: (npcs || []).map(mapDBToNpc),
           players: (players || []).map(mapDBToPlayer),
-          plotPoints: [],
           food: supplies ? { water: supplies.water, food: supplies.food, people: supplies.people } : { water: 0, food: 0, people: 0 },
           maps: maps || []
         });
@@ -224,8 +222,7 @@ export function useGameSync() {
           const mappedNpcs = next.npcs.map(n => mapNpcToDB(n, cid));
           supabase.from("npcs").upsert(mappedNpcs).then(({ error }) => {
             if (error) {
-              console.error("Erro ao salvar NPCs no Supabase:", error.message, error.code, error.details);
-              alert(`Erro do banco de dados ao salvar NPC: ${error.message} (Código: ${error.code})`);
+              window.dispatchEvent(new CustomEvent('system-alert', { detail: { message: `Erro do banco de dados ao salvar NPC: ${error.message}`, type: 'danger' } }));
             }
           });
         }
@@ -246,8 +243,7 @@ export function useGameSync() {
           if (role === 'gm') {
             supabase.from("players").upsert(mappedPlayers).then(({ error }) => {
               if (error) {
-                console.error("Erro ao salvar players no Supabase (GM):", error.message, error.code, error.details);
-                alert(`Erro do banco de dados ao salvar Player: ${error.message} (Código: ${error.code})`);
+                window.dispatchEvent(new CustomEvent('system-alert', { detail: { message: `Erro do banco de dados ao salvar Player: ${error.message}`, type: 'danger' } }));
               }
             });
           } else if (role === 'player' && playerId) {
@@ -255,8 +251,7 @@ export function useGameSync() {
             if (myPlayer) {
               supabase.from("players").update(myPlayer).eq("id", playerId).then(({ error }) => {
                 if (error) {
-                  console.error("Erro ao salvar player no Supabase (Player):", error.message, error.code, error.details);
-                  alert(`Erro do banco de dados ao salvar seu Player: ${error.message} (Código: ${error.code})`);
+                  window.dispatchEvent(new CustomEvent('system-alert', { detail: { message: `Erro ao salvar seu Player: ${error.message}`, type: 'danger' } }));
                 }
               });
             }

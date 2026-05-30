@@ -61,6 +61,10 @@ export function MainQuestModal({ isOpen, onClose }: QuestModalProps) {
 
     const blocoIndex = activeData.blocoIndex;
     const newJornada = { ...jornadaPorDia };
+    newJornada[diaAtual] = { ...newJornada[diaAtual] };
+    newJornada[diaAtual].blocos = [...newJornada[diaAtual].blocos];
+    newJornada[diaAtual].blocos[blocoIndex] = { ...newJornada[diaAtual].blocos[blocoIndex] };
+    newJornada[diaAtual].blocos[blocoIndex].plots = [...newJornada[diaAtual].blocos[blocoIndex].plots];
     const plots = newJornada[diaAtual].blocos[blocoIndex].plots;
 
     if (activeData.topicIndex !== undefined) {
@@ -70,7 +74,6 @@ export function MainQuestModal({ isOpen, onClose }: QuestModalProps) {
     }
 
     setJornadaPorDia(newJornada);
-    setTimeout(salvarEstadoLocal, 100);
     onClose();
   };
 
@@ -79,10 +82,13 @@ export function MainQuestModal({ isOpen, onClose }: QuestModalProps) {
     
     const blocoIndex = activeData.blocoIndex;
     const newJornada = { ...jornadaPorDia };
+    newJornada[diaAtual] = { ...newJornada[diaAtual] };
+    newJornada[diaAtual].blocos = [...newJornada[diaAtual].blocos];
+    newJornada[diaAtual].blocos[blocoIndex] = { ...newJornada[diaAtual].blocos[blocoIndex] };
+    newJornada[diaAtual].blocos[blocoIndex].plots = [...newJornada[diaAtual].blocos[blocoIndex].plots];
     newJornada[diaAtual].blocos[blocoIndex].plots.splice(activeData.topicIndex, 1);
 
     setJornadaPorDia(newJornada);
-    setTimeout(salvarEstadoLocal, 100);
     onClose();
   };
 
@@ -310,6 +316,10 @@ export function SideQuestModal({ isOpen, onClose }: QuestModalProps) {
 
     const blocoIndex = activeData.blocoIndex;
     const newJornada = { ...jornadaPorDia };
+    newJornada[diaAtual] = { ...newJornada[diaAtual] };
+    newJornada[diaAtual].blocos = [...newJornada[diaAtual].blocos];
+    newJornada[diaAtual].blocos[blocoIndex] = { ...newJornada[diaAtual].blocos[blocoIndex] };
+    newJornada[diaAtual].blocos[blocoIndex].sidequests = [...newJornada[diaAtual].blocos[blocoIndex].sidequests];
     const sidequests = newJornada[diaAtual].blocos[blocoIndex].sidequests;
 
     if (activeData.topicIndex !== undefined) {
@@ -319,7 +329,6 @@ export function SideQuestModal({ isOpen, onClose }: QuestModalProps) {
     }
 
     setJornadaPorDia(newJornada);
-    setTimeout(salvarEstadoLocal, 100);
     onClose();
   };
 
@@ -328,10 +337,13 @@ export function SideQuestModal({ isOpen, onClose }: QuestModalProps) {
     
     const blocoIndex = activeData.blocoIndex;
     const newJornada = { ...jornadaPorDia };
+    newJornada[diaAtual] = { ...newJornada[diaAtual] };
+    newJornada[diaAtual].blocos = [...newJornada[diaAtual].blocos];
+    newJornada[diaAtual].blocos[blocoIndex] = { ...newJornada[diaAtual].blocos[blocoIndex] };
+    newJornada[diaAtual].blocos[blocoIndex].sidequests = [...newJornada[diaAtual].blocos[blocoIndex].sidequests];
     newJornada[diaAtual].blocos[blocoIndex].sidequests.splice(activeData.topicIndex, 1);
 
     setJornadaPorDia(newJornada);
-    setTimeout(salvarEstadoLocal, 100);
     onClose();
   };
 

@@ -16,29 +16,17 @@ import PlayerDetailModal from "./PlayerDetailModal";
 import PersonalNoteModal, { PersonalNoteDetailModal } from "./PersonalNoteModal";
 
 export default function ModalsContainer() {
-  const { modals, setModals, activeData, diaAtual, jornadaPorDia, indiceBlocoAtivo } = useAppContext();
+  const { modals, setModals, activeData } = useAppContext();
 
   const close = (key: keyof typeof modals) => {
     setModals((prev: any) => ({ ...prev, [key]: false }));
-  };
-
-  const getFaseGradient = () => {
-    switch(indiceBlocoAtivo) {
-       case 0: return 'linear-gradient(to bottom, rgba(245, 225, 164, 0.07), #09090b 40%)';
-       case 1: return 'linear-gradient(to bottom, rgba(255, 195, 0, 0.07), #09090b 40%)';
-       case 2: return 'linear-gradient(to bottom, rgba(191, 107, 44, 0.07), #09090b 40%)';
-       case 3: return 'linear-gradient(to bottom, rgba(204, 51, 255, 0.07), #09090b 40%)';
-       case 4: return 'linear-gradient(to bottom, rgba(0, 102, 204, 0.07), #09090b 40%)';
-       case 5: return 'linear-gradient(to bottom, rgba(153, 102, 255, 0.07), #09090b 40%)';
-       default: return '#09090b';
-    }
   };
 
   return (
     <>
       <style>{`
         .modal-content {
-           background: ${getFaseGradient()} !important;
+           background: #09090b !important;
         }
       `}</style>
       <NpcFormModal isOpen={modals.npcForm} onClose={() => close("npcForm")} />

@@ -3,11 +3,12 @@
 import { useAppContext } from "@/contexts/AppContext";
 import { useUserSession } from "@/contexts/UserSessionContext";
 import { blocosDeTempo } from "@/lib/gameData";
+import { getInitialJornada } from "@/lib/dataHelpers";
 import DashboardBlock from "./DashboardBlock";
 import { useSystemDialog } from "@/contexts/SystemDialogContext";
 
 export default function DashboardView() {
-  const { diaAtual, setDiaAtual, indiceBlocoAtivo, setIndiceBlocoAtivo, jornadaPorDia, setModals, dadosGlobais, setActiveData } = useAppContext();
+  const { diaAtual, setDiaAtual, indiceBlocoAtivo, setIndiceBlocoAtivo, jornadaPorDia, setJornadaPorDia, setModals, dadosGlobais, setActiveData } = useAppContext();
   const { isGM } = useUserSession();
   const { showConfirm } = useSystemDialog();
 
@@ -68,7 +69,6 @@ export default function DashboardView() {
     setJornadaPorDia((prev: any) => {
       const updated = { ...prev };
       if (!updated[nextDay]) {
-        const { getInitialJornada } = require("@/lib/dataHelpers");
         const initial = getInitialJornada();
         updated[nextDay] = initial[1]; // Usa o dia 1 como template
         

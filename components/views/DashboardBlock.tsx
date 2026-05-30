@@ -12,6 +12,7 @@ export default function DashboardBlock() {
   const { diaAtual, indiceBlocoAtivo, jornadaPorDia, setJornadaPorDia, dadosGlobais, setDadosGlobais, setModals, setActiveData, salvarEstadoLocal } = useAppContext();
   const { isGM, session } = useUserSession();
   const router = useRouter();
+  const supabaseUrlCache = React.useRef<Record<string, string>>({});
 
   const dayData = jornadaPorDia[diaAtual];
   if (!dayData || !dayData.blocos) return null;
@@ -22,7 +23,7 @@ export default function DashboardBlock() {
     e.stopPropagation();
     if (!isGM) return; // Jogadores não podem concluir ações por enquanto (ou só do próprio char)
     
-    const newJornada = JSON.parse(JSON.stringify(jornadaPorDia));
+    const newJornada = structuredClone(jornadaPorDia);
     const pSession = newJornada[diaAtual].blocos[indiceBlocoAtivo].playerSessions[playerId];
     if (pSession && pSession.acoes) {
       const idx = pSession.acoes.findIndex((a: any) => typeof a === 'object' && a.id === acaoId);
@@ -40,7 +41,6 @@ export default function DashboardBlock() {
          setDadosGlobais({...dadosGlobais, players: newPlayers});
        }
     }
-    setTimeout(salvarEstadoLocal, 100);
   };
   const bloco = blocosDeTempo[indiceBlocoAtivo];
   const players = (dadosGlobais.players || []).slice().sort((a: any, b: any) => {
@@ -49,15 +49,18 @@ export default function DashboardBlock() {
     return 0;
   });
 
-  const getAvatarUrl = (img: string) => {
+  const getAvatarUrl = React.useCallback((img: string) => {
     if (!img) return "";
     if (img.startsWith("http") || img.startsWith("data:")) return img;
+    if (supabaseUrlCache.current[img]) return supabaseUrlCache.current[img];
     const supabase = createClient();
-    return supabase.storage.from("images").getPublicUrl(img).data.publicUrl;
-  };
+    const url = supabase.storage.from("images").getPublicUrl(img).data.publicUrl;
+    supabaseUrlCache.current[img] = url;
+    return url;
+  }, []);
 
   const updateWeather = (weather: string) => {
-    const newJornada = JSON.parse(JSON.stringify(jornadaPorDia));
+    const newJornada = structuredClone(jornadaPorDia);
     
     // 1. Propagar para os blocos seguintes do dia atual
     for (let i = indiceBlocoAtivo; i < newJornada[diaAtual].blocos.length; i++) {
@@ -75,14 +78,12 @@ export default function DashboardBlock() {
     });
 
     setJornadaPorDia(newJornada);
-    setTimeout(salvarEstadoLocal, 100);
   };
 
   const removeTopic = (type: "timeline" | "plots" | "sidequests", index: number) => {
-    const newJornada = JSON.parse(JSON.stringify(jornadaPorDia));
+    const newJornada = structuredClone(jornadaPorDia);
     newJornada[diaAtual].blocos[indiceBlocoAtivo][type].splice(index, 1);
     setJornadaPorDia(newJornada);
-    setTimeout(salvarEstadoLocal, 100);
   };
 
   const openGlobalEvent = (index?: number) => {

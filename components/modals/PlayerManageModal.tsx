@@ -69,10 +69,15 @@ export default function PlayerManageModal({ isOpen, onClose, player }: PlayerMan
     
     const blocoIndex = activeData.blocoIndex;
     const newJornada = { ...jornadaPorDia };
+    newJornada[diaAtual] = { ...newJornada[diaAtual] };
+    newJornada[diaAtual].blocos = [...newJornada[diaAtual].blocos];
+    newJornada[diaAtual].blocos[blocoIndex] = { ...newJornada[diaAtual].blocos[blocoIndex] };
     const blocos = newJornada[diaAtual].blocos;
     
     if (!blocos[blocoIndex].playerSessions) {
       blocos[blocoIndex].playerSessions = {};
+    } else {
+      blocos[blocoIndex].playerSessions = { ...blocos[blocoIndex].playerSessions };
     }
 
     // Filtra strings vazias
@@ -86,7 +91,6 @@ export default function PlayerManageModal({ isOpen, onClose, player }: PlayerMan
     };
 
     setJornadaPorDia(newJornada);
-    setTimeout(salvarEstadoLocal, 100);
     onClose();
   };
 

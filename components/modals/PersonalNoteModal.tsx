@@ -48,14 +48,22 @@ export default function PersonalNoteModal({ isOpen, onClose }: PersonalNoteModal
 
     const newJornada = { ...jornadaPorDia };
     if (!newJornada[diaAtual]) return;
+    newJornada[diaAtual] = { ...newJornada[diaAtual] };
+    newJornada[diaAtual].blocos = [...newJornada[diaAtual].blocos];
+    newJornada[diaAtual].blocos[indiceBlocoAtivo] = { ...newJornada[diaAtual].blocos[indiceBlocoAtivo] };
     const bData = newJornada[diaAtual].blocos[indiceBlocoAtivo];
     
     if (!bData.playerSessions) bData.playerSessions = {};
+    else bData.playerSessions = { ...bData.playerSessions };
+
     if (!bData.playerSessions[session.id]) {
       bData.playerSessions[session.id] = { acoes: [], objetivos: [], concluido: false, notes: [] };
+    } else {
+      bData.playerSessions[session.id] = { ...bData.playerSessions[session.id] };
     }
     
-    const notes = bData.playerSessions[session.id].notes || [];
+    let notes = bData.playerSessions[session.id].notes || [];
+    notes = [...notes];
 
     if (activeData && activeData.topicIndex !== undefined) {
       notes[activeData.topicIndex] = { ...notes[activeData.topicIndex], ...noteData };
@@ -65,7 +73,6 @@ export default function PersonalNoteModal({ isOpen, onClose }: PersonalNoteModal
     
     bData.playerSessions[session.id].notes = notes;
     setJornadaPorDia(newJornada);
-    setTimeout(salvarEstadoLocal, 100);
     onClose();
   };
 
@@ -74,14 +81,21 @@ export default function PersonalNoteModal({ isOpen, onClose }: PersonalNoteModal
     
     const newJornada = { ...jornadaPorDia };
     if (!newJornada[diaAtual]) return;
+    newJornada[diaAtual] = { ...newJornada[diaAtual] };
+    newJornada[diaAtual].blocos = [...newJornada[diaAtual].blocos];
+    newJornada[diaAtual].blocos[indiceBlocoAtivo] = { ...newJornada[diaAtual].blocos[indiceBlocoAtivo] };
     const bData = newJornada[diaAtual].blocos[indiceBlocoAtivo];
     
-    if (bData.playerSessions && bData.playerSessions[session.id] && bData.playerSessions[session.id].notes) {
-      bData.playerSessions[session.id].notes.splice(activeData.topicIndex, 1);
+    if (bData.playerSessions && bData.playerSessions[session.id]) {
+      bData.playerSessions = { ...bData.playerSessions };
+      bData.playerSessions[session.id] = { ...bData.playerSessions[session.id] };
+      if (bData.playerSessions[session.id].notes) {
+        bData.playerSessions[session.id].notes = [...bData.playerSessions[session.id].notes];
+        bData.playerSessions[session.id].notes.splice(activeData.topicIndex, 1);
+      }
     }
 
     setJornadaPorDia(newJornada);
-    setTimeout(salvarEstadoLocal, 100);
     onClose();
   };
 

@@ -37,7 +37,7 @@ export async function updateSession(request: NextRequest) {
   const isAuthPage = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname === '/'
   
   // Protect all app routes
-  const protectedRoutes = ['/dashboard', '/cronicas', '/npcs', '/jogadores', '/alimentos', '/mapas', '/ajustes']
+  const protectedRoutes = ['/dashboard', '/cronicas', '/npcs', '/jogadores', '/alimentos', '/mapas', '/ajustes', '/usuarios']
   const isProtectedRoute = protectedRoutes.some(route => request.nextUrl.pathname.startsWith(route))
                           
   if (!user && isProtectedRoute) {
@@ -51,8 +51,8 @@ export async function updateSession(request: NextRequest) {
   // Mas aqui no middleware é mais seguro. Se for /ajustes e o user estiver logado, checa profile.
   if (user && request.nextUrl.pathname.startsWith('/ajustes')) {
     // Note: This adds a query on every hit to /ajustes.
-    // O role pode estar na sessão meta-data se foi configurado.
-    const role = user.user_metadata?.role
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    const role = profile?.role
     if (role === 'player') {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'

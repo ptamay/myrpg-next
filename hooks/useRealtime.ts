@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 // Este hook escuta as mudanças no banco e dispara callbacks para atualizar o estado local
@@ -11,7 +11,7 @@ export function useRealtimeSync(callbacks: {
   onJourneyChange: () => void;
   onSuppliesChange: () => void;
 }) {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const callbacksRef = useRef(callbacks);
 
