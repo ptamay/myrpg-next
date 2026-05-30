@@ -406,7 +406,7 @@ body.theme-noturna .particle {
     flex: 1;
     height: 100vh;
     overflow: hidden;
-    padding: 2.5rem;
+    padding: 1.25rem;
     scroll-behavior: smooth;
     display: flex;
     flex-direction: column;
@@ -536,7 +536,7 @@ body.theme-noturna .particle {
 .dash-ultra-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1rem;
     height: 100%;
     max-width: 1800px;
     margin: 0 auto;
@@ -547,7 +547,7 @@ body.theme-noturna .particle {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.25rem 2rem;
+    padding: 1rem 1.5rem;
     border-radius: var(--radius-lg);
     background: linear-gradient(90deg, hsla(240, 10%, 8%, 0.8), hsla(250, 20%, 12%, 0.9));
     box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), inset 0 1px 1px hsla(0, 0%, 100%, 0.05);
@@ -819,11 +819,11 @@ body.theme-noturna .particle {
     border-radius: var(--radius-lg);
     position: relative;
     overflow: hidden;
-    height: 140px;
+    height: 120px;
     background: radial-gradient(circle at 50% -20%, var(--accent-glow), transparent 70%), hsla(240, 10%, 8%, 0.7);
     border: 1px solid var(--border-subtle);
     box-shadow: var(--shadow-premium);
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
     flex-shrink: 0;
 }
 
@@ -1109,6 +1109,7 @@ body.theme-noturna .particle {
     flex-direction: column;
     min-height: 0;
     height: 100%;
+    overflow: hidden;
 }
 .world-section-header {
     position: sticky;
@@ -1225,6 +1226,7 @@ body.theme-noturna .particle {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    padding-bottom: 1.5rem;
 }
 
 .dash-player-card {
@@ -1461,7 +1463,7 @@ body.theme-noturna .particle {
 
 .npc-cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
     gap: 1.5rem;
     padding: 8px 8px 2rem 8px;
 }
@@ -4644,6 +4646,7 @@ body.hide-combat-effects .npc-card-combat-console {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    padding-bottom: 24px;
 }
 
 .spc-card {
@@ -4655,6 +4658,7 @@ body.hide-combat-effects .npc-card-combat-console {
     transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
     position: relative;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 .spc-card::before {

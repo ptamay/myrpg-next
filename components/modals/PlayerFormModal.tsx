@@ -5,6 +5,7 @@ import Modal from "../ui/Modal";
 import CropModal from "./CropModal";
 import { useAppContext } from "@/contexts/AppContext";
 import { useSystemDialog } from "@/contexts/SystemDialogContext";
+import { useUserSession } from "@/contexts/UserSessionContext";
 import { createClient } from "@/lib/supabase/client";
 
 interface PlayerFormModalProps {
@@ -23,6 +24,7 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
   ];
   const { dadosGlobais, setDadosGlobais, salvarEstadoLocal, activeData } = useAppContext();
   const { showAlert } = useSystemDialog();
+  const { isGM } = useUserSession();
 
   const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
@@ -339,6 +341,7 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
                     className="journey-input" 
                     value={selectedUserId} 
                     onChange={(e) => setSelectedUserId(e.target.value)}
+                    disabled={!isGM}
                   >
                     <option value="">Nenhum (Controle do Mestre)</option>
                     {profiles.map(p => (

@@ -41,6 +41,9 @@ export function useRealtimeSync(callbacks: {
         "postgres_changes", { event: "*", schema: "public", table: "supplies" },
         () => callbacksRef.current.onSuppliesChange()
       )
+      .on("broadcast", { event: "day_passed" }, (payload: any) => {
+        window.dispatchEvent(new CustomEvent('day-passed-alert', { detail: payload.payload.newDay }));
+      })
       .on("broadcast", { event: "refresh_journey" }, () => callbacksRef.current.onJourneyChange())
       .on("broadcast", { event: "refresh_campaign" }, () => callbacksRef.current.onCampaignChange())
       .on("broadcast", { event: "refresh_players" }, () => callbacksRef.current.onPlayersChange())

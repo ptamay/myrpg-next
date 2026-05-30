@@ -14,60 +14,53 @@ export default function NpcCardPlayer({ npc }: NpcCardPlayerProps) {
     setModals((prev: any) => ({ ...prev, summaryCard: true }));
   };
 
+  const factionBorder = npc.faction === 'enemy' ? 'border-danger' : npc.faction === 'ally' ? 'border-success' : 'border-neutral';
+
   return (
-    <div className={`npc-card glass-panel clickable-card ${npc.isDead ? "is-dead" : ""}`} onClick={openDetail} style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1rem", cursor: "pointer" }}>
+    <div className={`npc-card glass-panel clickable-card ${npc.isDead ? "is-dead" : ""} ${factionBorder}`} onClick={openDetail}>
       {npc.isDead && <div className="status-dead-overlay">💀</div>}
       
-      {/* HEADER */}
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+      <div className="npc-card-header">
         {npc.image ? (
-          <img 
-            src={npc.image} 
-            alt={npc.name} 
-            style={{ width: "80px", height: "80px", borderRadius: "50%", objectFit: "cover", border: "2px solid var(--border-bright)", filter: npc.isDead ? "grayscale(100%)" : "none" }} 
-          />
+          <img src={npc.image} className="npc-card-avatar" alt={npc.name} />
         ) : (
-          <div style={{ width: "80px", height: "80px", borderRadius: "50%", background: "var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", fontWeight: "bold", filter: npc.isDead ? "grayscale(100%)" : "none" }}>
-            {npc.name.charAt(0)}
-          </div>
+          <div className="npc-card-placeholder">{npc.name.charAt(0).toUpperCase()}</div>
         )}
-        
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h3 style={{ fontSize: "1.2rem", fontWeight: 800, margin: 0, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {npc.name}
-          </h3>
-          <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {npc.title} {npc.title && npc.faction ? '·' : ''} {npc.faction}
-          </p>
+        <div className="npc-card-title-area">
+          <div className="npc-card-name">{npc.name}</div>
+          <div className="npc-card-title">{npc.title || 'Sem título'}</div>
+          <div className="npc-card-meta">
+            <span>{npc.race || '---'}</span>
+            <span>•</span>
+            <span>ND {npc.cr || '0'}</span>
+          </div>
+          <div className="npc-card-active-conditions">
+            {npc.tempCond?.map((c: string, i: number) => <span key={i} className="active-cond-badge">{c}</span>)}
+            {npc.tempRes?.map((r: string, i: number) => <span key={i} className="active-res-badge">{r}</span>)}
+          </div>
         </div>
       </div>
 
-      <div style={{ height: "1px", background: "var(--border-subtle)", margin: "0.5rem 0" }} />
-
-      {/* DETALHES PÚBLICOS */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <div className="npc-card-narrative-details">
         {npc.mot && (
-          <div>
-            <span className="narrative-label">◆ MOTIVAÇÕES</span>
-            <div className="narrative-text">{npc.mot}</div>
+          <div className="narrative-block">
+            <span className="narrative-label">Motivações</span>
+            <p className="narrative-text">{npc.mot}</p>
           </div>
         )}
-
         {npc.itemsVis && (
-          <div>
-            <span className="narrative-label">◆ ITENS VISÍVEIS</span>
-            <div className="narrative-text">{npc.itemsVis}</div>
+          <div className="narrative-block">
+            <span className="narrative-label">Itens Visíveis</span>
+            <p className="narrative-text">{npc.itemsVis}</p>
           </div>
         )}
-
         {npc.traits && (
-          <div>
-            <span className="narrative-label">◆ TRAÇOS</span>
-            <div className="narrative-text">{npc.traits}</div>
+          <div className="narrative-block">
+            <span className="narrative-label">Traços</span>
+            <p className="narrative-text">{npc.traits}</p>
           </div>
         )}
       </div>
-
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { DiaryEntry } from "@/types/cronicas";
 import { useDiario } from "@/hooks/useGameData";
 import DiarioEntryCard from "./DiarioEntryCard";
 import DiarioEntryForm from "./DiarioEntryForm";
+import { motion, AnimatePresence } from "framer-motion";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -192,17 +193,28 @@ export default function DiarioFeed() {
               {/* Entradas */}
               <div className="timeline-container">
                 <div className="timeline-line"></div>
-                {sessionEntries.map(entry => (
-                  <DiarioEntryCard
-                    key={entry.id}
-                    entry={entry}
-                    canDelete={isGM || entry.authorId === session?.playerId}
-                    onDelete={id => remove(id)}
-                    onUpdate={update}
-                    currentUserId={session?.playerId ?? "gm"}
-                    currentUserName={currentUserName}
-                  />
-                ))}
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {sessionEntries.map(entry => (
+                    <motion.div
+                      key={entry.id}
+                      layout
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                      transition={{ duration: 0.3 }}
+                      style={{ width: "100%" }}
+                    >
+                      <DiarioEntryCard
+                        entry={entry}
+                        canDelete={isGM || entry.authorId === session?.playerId}
+                        onDelete={id => remove(id)}
+                        onUpdate={update}
+                        currentUserId={session?.playerId ?? "gm"}
+                        currentUserName={currentUserName}
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
             </div>
           ))}

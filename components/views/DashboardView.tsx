@@ -86,7 +86,7 @@ export default function DashboardView() {
 
   // Função para desenhar a navbar do dia/bloco
   return (
-    <div id="view-dashboard" className="view active" style={{ display: "block" }}>
+    <div id="view-dashboard" className="view active" style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       <div className="dash-ultra-wrapper">
         <header className="dash-ultra-header glass-panel">
           <div className="dash-day-control">

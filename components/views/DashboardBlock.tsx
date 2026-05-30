@@ -588,7 +588,7 @@ export default function DashboardBlock() {
         </div>
       </div>
       
-      <div className="block-two-cols mt-4">
+      <div className="block-two-cols mt-0">
         {isGM ? (
           <>
             {worldBlock}

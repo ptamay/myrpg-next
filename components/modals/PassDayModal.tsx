@@ -5,6 +5,7 @@ import Modal from "../ui/Modal";
 import { useAppContext } from "@/contexts/AppContext";
 import { useSystemDialog } from "@/contexts/SystemDialogContext";
 import { getInitialJornada } from "@/lib/dataHelpers";
+import { createClient } from "@/lib/supabase/client";
 
 interface PassDayModalProps {
   isOpen: boolean;
@@ -80,6 +81,13 @@ export default function PassDayModal({ isOpen, onClose }: PassDayModalProps) {
         });
       }
       return updated;
+    });
+
+    const supabase = createClient();
+    supabase.channel('game-sync').send({
+      type: 'broadcast',
+      event: 'day_passed',
+      payload: { newDay: nextDay }
     });
 
     setTimeout(salvarEstadoLocal, 100);

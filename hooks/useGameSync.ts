@@ -191,7 +191,10 @@ export function useGameSync() {
       const next = typeof val === 'function' ? val(prev) : val;
       if (campaignIdRef.current) {
         supabase.from("campaign").update({ current_day: next }).eq("id", campaignIdRef.current)
-          .then(({ error }) => { if (error) console.error("Erro ao atualizar dia:", error); });
+          .then(({ error }) => { 
+            if (error) console.error("Erro ao atualizar dia:", error); 
+            else supabase.channel('game-sync').send({ type: 'broadcast', event: 'refresh_campaign' });
+          });
       }
       return next;
     });
@@ -202,7 +205,10 @@ export function useGameSync() {
       const next = typeof val === 'function' ? val(prev) : val;
       if (campaignIdRef.current) {
         supabase.from("campaign").update({ active_block_index: next }).eq("id", campaignIdRef.current)
-          .then(({ error }) => { if (error) console.error("Erro ao atualizar bloco:", error); });
+          .then(({ error }) => { 
+            if (error) console.error("Erro ao atualizar bloco:", error); 
+            else supabase.channel('game-sync').send({ type: 'broadcast', event: 'refresh_campaign' });
+          });
       }
       return next;
     });

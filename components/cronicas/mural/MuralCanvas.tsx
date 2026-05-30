@@ -11,6 +11,7 @@ import MuralConnectionLayer from "./MuralConnectionLayer";
 import MuralToolbar from "./MuralToolbar";
 import MuralCardForm from "./MuralCardForm";
 import { toPng } from "html-to-image";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function MuralCanvas() {
   const { murais, loading, save } = useMurais();
@@ -376,48 +377,58 @@ export default function MuralCanvas() {
               save(updated);
             }}
           />
-          {/* Cards */}
-          {visibleCards.map(card => (
-            <MuralCard
-              key={card.id}
-              card={card}
-              zoom={zoom}
-              pan={pan}
-              isConnecting={connectingFrom === card.id}
-              canEdit={canEdit}
-              onCardClick={() => {
-                if (!canEdit || !mural) return;
-                if (connectingFrom === "") {
-                  setConnectingFrom(card.id);
-                } else if (connectingFrom && connectingFrom !== card.id) {
-                  // Criar conexão
-                  const updated: Mural = {
-                    ...mural,
-                    connections: [...mural.connections, {
-                      id: crypto.randomUUID(),
-                      muralId: mural.id,
-                      fromCardId: connectingFrom,
-                      toCardId: card.id,
-                    }],
-                  };
-                  save(updated);
-                  setConnectingFrom(null);
-                }
-              }}
-              onEdit={() => setEditingCardId(card.id)}
-              onDelete={async () => {
-                if (!mural) return;
-                if (await showConfirm({ title: "Deletar Card", message: "Deseja deletar este card e todas as suas conexões?", type: "danger" })) {
-                  const updated = {
-                    ...mural,
-                    cards: mural.cards.filter(c => c.id !== card.id),
-                    connections: mural.connections.filter(c => c.fromCardId !== card.id && c.toCardId !== card.id)
-                  };
-                  save(updated);
-                }
-              }}
-            />
-          ))}
+          <AnimatePresence mode="popLayout" initial={false}>
+            {visibleCards.map(card => (
+              <motion.div
+                key={card.id}
+                layout
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8, filter: "blur(4px)" }}
+                transition={{ duration: 0.3 }}
+                style={{ position: "absolute", left: 0, top: 0 }}
+              >
+                <MuralCard
+                  card={card}
+                  zoom={zoom}
+                  pan={pan}
+                  isConnecting={connectingFrom === card.id}
+                  canEdit={canEdit}
+                  onCardClick={() => {
+                    if (!canEdit || !mural) return;
+                    if (connectingFrom === "") {
+                      setConnectingFrom(card.id);
+                    } else if (connectingFrom && connectingFrom !== card.id) {
+                      // Criar conexão
+                      const updated: Mural = {
+                        ...mural,
+                        connections: [...mural.connections, {
+                          id: crypto.randomUUID(),
+                          muralId: mural.id,
+                          fromCardId: connectingFrom,
+                          toCardId: card.id,
+                        }],
+                      };
+                      save(updated);
+                      setConnectingFrom(null);
+                    }
+                  }}
+                  onEdit={() => setEditingCardId(card.id)}
+                  onDelete={async () => {
+                    if (!mural) return;
+                    if (await showConfirm({ title: "Deletar Card", message: "Deseja deletar este card e todas as suas conexões?", type: "danger" })) {
+                      const updated = {
+                        ...mural,
+                        cards: mural.cards.filter(c => c.id !== card.id),
+                        connections: mural.connections.filter(c => c.fromCardId !== card.id && c.toCardId !== card.id)
+                      };
+                      save(updated);
+                    }
+                  }}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       </DndContext>
 

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import DiarioFeed from "../cronicas/diario/DiarioFeed";
 import MuralCanvas from "../cronicas/mural/MuralCanvas";
+import { motion, AnimatePresence } from "framer-motion";
 
 type CronicasTab = "diario" | "mural";
 
@@ -42,9 +43,20 @@ export default function CronicasView() {
         </div>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-        {activeTab === "diario" && <DiarioFeed />}
-        {activeTab === "mural" && <MuralCanvas />}
+      <div style={{ flex: 1, minHeight: 0, overflow: "hidden", position: "relative" }}>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
+            transition={{ duration: 0.3 }}
+            style={{ height: "100%" }}
+          >
+            {activeTab === "diario" && <DiarioFeed />}
+            {activeTab === "mural" && <MuralCanvas />}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
