@@ -120,10 +120,16 @@ export function useGameSync() {
   useEffect(() => {
     async function fetchInitialData() {
       try {
-        // 1. Campaign
-        let { data: campaign } = await supabase.from("campaign").select("*").limit(1).single();
-        
-        // Se não houver campanha, cria a padrão
+        const [campaignResp, npcsResp, playersResp, suppliesResp, mapsResp, blocksResp] = await Promise.all([
+          supabase.from("campaign").select("*").limit(1).maybeSingle(),
+          supabase.from("npcs").select("*"),
+          supabase.from("players").select("*"),
+          supabase.from("supplies").select("*").limit(1).maybeSingle(),
+          supabase.from("maps").select("*"),
+          supabase.from("journey_blocks").select("*, journey_days(day_number)")
+        ]);
+
+        let campaign = campaignResp.data;
         if (!campaign) {
           const { data: newCampaign, error } = await supabase.from("campaign")
             .insert({ name: 'Campanha MyRPG', current_day: 1, active_block_index: 0 })
@@ -139,14 +145,11 @@ export function useGameSync() {
           setIndiceBlocoAtivoLocal(campaign.active_block_index);
         }
 
-        // 2. NPCs
-        const { data: npcs } = await supabase.from("npcs").select("*");
-        // 3. Players
-        const { data: players } = await supabase.from("players").select("*");
-        // 4. Supplies
-        const { data: supplies } = await supabase.from("supplies").select("*").limit(1).single();
-        // 5. Maps (metadata only for now)
-        const { data: maps } = await supabase.from("maps").select("*");
+        const npcs = npcsResp.data;
+        const players = playersResp.data;
+        const supplies = suppliesResp.data;
+        const maps = mapsResp.data;
+        const blocks = blocksResp.data;
 
         setDadosGlobaisLocal({
           npcs: (npcs || []).map(mapDBToNpc),
@@ -155,8 +158,6 @@ export function useGameSync() {
           maps: maps || []
         });
 
-        // 6. Journey Blocks
-        const { data: blocks } = await supabase.from("journey_blocks").select("*, journey_days(day_number)");
         if (blocks && blocks.length > 0) {
           const newJornada: Record<number, any> = {};
           blocks.forEach(block => {
@@ -303,8 +304,8 @@ export function useGameSync() {
       ]);
 
       allDays.forEach(day => {
-        if (prev[day] !== next[day] && next[day] && next[day].blocos && role === 'gm') {
-          syncJourneyToSupabase(cid, day, next[day].blocos, supabase);
+        if (prev[day] !== next[day] && next[day] && next[day].blocos) {
+          syncJourneyToSupabase(cid, day, next[day].blocos, supabase, role, userProfileRef.current.playerId);
         }
       });
       return next;
@@ -325,29 +326,49 @@ export function useGameSync() {
 }
 
 // Helper to sync journey blocks
-async function syncJourneyToSupabase(campaignId: string, dayNumber: number, blocos: any[], supabase: any) {
+async function syncJourneyToSupabase(campaignId: string, dayNumber: number, blocos: any[], supabase: any, role: string | null, playerId: string | null) {
   try {
-    // 1. Upsert day
-    const { data: dayData } = await supabase.from("journey_days")
-      .upsert({ campaign_id: campaignId, day_number: dayNumber }, { onConflict: 'campaign_id,day_number' })
-      .select('id').single();
+    if (role === 'gm') {
+      // 1. Upsert day
+      const { data: dayData } = await supabase.from("journey_days")
+        .upsert({ campaign_id: campaignId, day_number: dayNumber }, { onConflict: 'campaign_id,day_number' })
+        .select('id').single();
 
-    if (!dayData) return;
+      if (!dayData) return;
 
-    // 2. Upsert blocks
-    const mappedBlocks = blocos.map((b, index) => ({
-      day_id: dayData.id,
-      block_index: index,
-      weather: b?.weather || 'clear',
-      weather_effect: b?.weatherEffect || 'clear',
-      timeline: b?.timeline || [],
-      plots: b?.plots || [],
-      sidequests: b?.sidequests || [],
-      player_sessions: b?.playerSessions || {}
-    }));
+      // 2. Upsert blocks
+      const mappedBlocks = blocos.map((b, index) => ({
+        day_id: dayData.id,
+        block_index: index,
+        weather: b?.weather || 'clear',
+        weather_effect: b?.weatherEffect || 'clear',
+        timeline: b?.timeline || [],
+        plots: b?.plots || [],
+        sidequests: b?.sidequests || [],
+        player_sessions: b?.playerSessions || {}
+      }));
 
-    await supabase.from("journey_blocks").upsert(mappedBlocks, { onConflict: 'day_id,block_index' });
-    supabase.channel('game-sync').send({ type: 'broadcast', event: 'refresh_journey' });
+      await supabase.from("journey_blocks").upsert(mappedBlocks, { onConflict: 'day_id,block_index' });
+      supabase.channel('game-sync').send({ type: 'broadcast', event: 'refresh_journey' });
+      
+    } else if (role === 'player' && playerId) {
+      // Find the block IDs first
+      const { data: dayData } = await supabase.from("journey_days").select("id").eq("campaign_id", campaignId).eq("day_number", dayNumber).single();
+      if (!dayData) return;
+      
+      const { data: blockRecords } = await supabase.from("journey_blocks").select("id, block_index").eq("day_id", dayData.id);
+      
+      if (blockRecords) {
+         for (const b of blockRecords) {
+            const localBlock = blocos[b.block_index];
+            const playerSession = localBlock?.playerSessions?.[playerId];
+            if (playerSession) {
+               await supabase.rpc('merge_player_session', { p_block_id: b.id, p_player_id: playerId, p_session_data: playerSession });
+            }
+         }
+         supabase.channel('game-sync').send({ type: 'broadcast', event: 'refresh_journey' });
+      }
+    }
   } catch (error) {
     console.error("Erro ao sincronizar jornada:", error);
   }

@@ -19,7 +19,7 @@ export function UserSessionProvider({ children }: { children: React.ReactNode })
     async function fetchProfile() {
       if (user) {
         const supabase = createClient();
-        const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        const { data } = await supabase.from('profiles').select('display_name, role, player_id').eq('id', user.id).single();
         if (data) {
           let avatarUrl = '';
           if (data.player_id) {

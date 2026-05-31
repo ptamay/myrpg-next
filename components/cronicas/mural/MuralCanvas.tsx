@@ -12,6 +12,8 @@ import MuralToolbar from "./MuralToolbar";
 import MuralCardForm from "./MuralCardForm";
 import { toPng } from "html-to-image";
 import { motion, AnimatePresence } from "framer-motion";
+import Modal from "@/components/ui/Modal";
+import { createClient } from "@/lib/supabase/client";
 
 export default function MuralCanvas() {
   const { murais, loading, save } = useMurais();
@@ -71,7 +73,10 @@ export default function MuralCanvas() {
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
   const [showCardForm, setShowCardForm] = useState(false);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [detailCard, setDetailCard] = useState<any>(null);
   const [isPanning, setIsPanning] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [tempName, setTempName] = useState("");
   // Estado otimista de posições: atualizado instantaneamente no drag, sem aguardar o save
   const [localPositions, setLocalPositions] = useState<Record<string, { x: number; y: number }>>({});
   
@@ -91,6 +96,28 @@ export default function MuralCanvas() {
       return next;
     });
   }, [mural?.id]); // Só re-sincroniza ao trocar de mural
+
+  // Realtime Broadcast para arrasto suave de cards
+  useEffect(() => {
+    if (!activeMuralId) return;
+    const supabase = createClient();
+    const channel = supabase.channel(`mural_drag_${activeMuralId}`, {
+      config: {
+        broadcast: { ack: false }
+      }
+    });
+
+    channel.on('broadcast', { event: 'card_move' }, (payload) => {
+      setLocalPositions(prev => ({
+        ...prev,
+        [payload.payload.cardId]: payload.payload.position
+      }));
+    }).subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeMuralId]);
 
   // Filtragem de cards e conexões para jogadores (ocultando NPCs com isHidden === true)
   // Aplica posições locais (otimistas) aos cards para renderização imediata
@@ -149,6 +176,14 @@ export default function MuralCanvas() {
     // Atualiza posição localmente de forma instantânea (sem esperar o save)
     setLocalPositions(prev => ({ ...prev, [cardId]: newPos }));
 
+    // Broadcast para outros jogadores
+    const supabase = createClient();
+    supabase.channel(`mural_drag_${mural.id}`).send({
+      type: 'broadcast',
+      event: 'card_move',
+      payload: { cardId, position: newPos }
+    });
+
     // Salva em background com debounce
     const updated: Mural = {
       ...mural,
@@ -183,15 +218,51 @@ export default function MuralCanvas() {
     }
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
+  const zoomRef = useRef(zoom);
+  const panRef = useRef(pan);
+
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
+
+  useEffect(() => {
+    panRef.current = pan;
+  }, [pan]);
+
+  // Zoom on wheel scroll centering on mouse pointer, preventing default scroll behavior
+  useEffect(() => {
+    const canvas = muralRef.current;
+    if (!canvas) return;
+
+    const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const newZoom = Math.min(Math.max(zoom - e.deltaY * 0.01, 0.4), 2);
+      
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      const currentZoom = zoomRef.current;
+      const currentPan = panRef.current;
+
+      const canvasMouseX = (mouseX - currentPan.x) / currentZoom;
+      const canvasMouseY = (mouseY - currentPan.y) / currentZoom;
+
+      // Adjust zoom factor based on platform (trackpads trigger smaller deltaY than mouse wheels)
+      const zoomFactor = Math.abs(e.deltaY) < 50 ? 0.005 : 0.0015;
+      const newZoom = Math.min(Math.max(currentZoom - e.deltaY * zoomFactor, 0.4), 2);
+
       setZoom(newZoom);
-    } else {
-      setPan(prev => ({ x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
-    }
-  };
+      setPan({
+        x: Math.min(Math.max(mouseX - canvasMouseX * newZoom, -4000), 4000),
+        y: Math.min(Math.max(mouseY - canvasMouseY * newZoom, -4000), 4000),
+      });
+    };
+
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      canvas.removeEventListener("wheel", onWheel);
+    };
+  }, [loading, activeMuralId, mural]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button === 0 && !e.ctrlKey && e.target === e.currentTarget) {
@@ -199,9 +270,17 @@ export default function MuralCanvas() {
     }
   };
 
+  const rafRef = useRef<number | null>(null);
+
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isPanning) {
-      setPan(prev => ({ x: prev.x + e.movementX, y: prev.y + e.movementY }));
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        setPan(prev => ({ 
+          x: Math.min(Math.max(prev.x + e.movementX, -4000), 4000), 
+          y: Math.min(Math.max(prev.y + e.movementY, -4000), 4000) 
+        }));
+      });
     }
   };
 
@@ -267,68 +346,144 @@ export default function MuralCanvas() {
               save(updated);
             }
           }}
+          onRecenter={() => setPan({x: 0, y: 0})}
         />
       )}
 
       {/* Barra de Slots de Investigação (Save States) */}
-      <div style={{ position: "absolute", top: 20, left: "50%", transform: "translateX(-50%)", display: "flex", gap: "0.5rem", zIndex: 100, background: "var(--bg-card)", padding: "0.5rem 1rem", borderRadius: "100px", border: "1px solid var(--border-subtle)", backdropFilter: "blur(10px)" }}>
-        <span style={{ color: "var(--text-muted)", fontSize: "0.85rem", display: "flex", alignItems: "center", marginRight: "0.5rem", fontWeight: "bold" }}>INVESTIGAÇÕES:</span>
-        {[1, 2, 3, 4, 5, 6].map(slot => {
-          const slotId = `slot-${slot}`;
-          const isSaved = murais.some(m => m.id === slotId);
-          const isActive = activeMuralId === slotId;
+      <div style={{ position: "absolute", top: 20, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", zIndex: 100 }}>
+        <div style={{ display: "flex", gap: "0.5rem", background: "var(--bg-card)", padding: "0.5rem 1rem", borderRadius: "100px", border: "1px solid var(--border-subtle)", backdropFilter: "blur(10px)", alignItems: "center" }}>
           
-          return (
-            <button
-              key={slot}
-              className={`btn small-btn ${isActive ? 'primary-btn' : (isSaved ? 'secondary-btn' : 'nav-btn')}`}
-              style={{ width: "36px", height: "36px", padding: 0, borderRadius: "50%" }}
-              onClick={async () => {
-                if (isSaved) {
-                  setActiveMuralId(slotId);
-                } else {
-                  // Cria um mural novo e vazio no slot
-                  const newMural: Mural = {
-                    id: slotId,
-                    name: `Investigação ${slot}`,
-                    cards: [], 
-                    connections: [],
-                    createdAt: new Date().toISOString(),
-                    backgroundStyle: 'grid'
-                  };
-                  save(newMural);
-                  setActiveMuralId(slotId);
+          {editingName && mural ? (
+            <input
+              autoFocus
+              type="text"
+              value={tempName}
+              onChange={(e) => setTempName(e.target.value)}
+              onBlur={() => {
+                setEditingName(false);
+                if (tempName.trim() !== "" && tempName !== mural.name) {
+                  save({ ...mural, name: tempName });
                 }
               }}
-              onContextMenu={async (e) => {
-                e.preventDefault();
-                if (!mural) return;
-                if (await showConfirm({ title: "Sobrescrever Slot", message: `Deseja clonar a investigação atual para o slot ${slot}? (O slot atual permanecerá intacto)`, type: "warning" })) {
-                  const idMap = new Map<string, string>();
-                  const newCards = mural.cards.map(c => {
-                    const newId = crypto.randomUUID();
-                    idMap.set(c.id, newId);
-                    return { ...c, id: newId, muralId: slotId };
-                  });
-                  const newConns = mural.connections.map(c => ({
-                    ...c,
-                    id: crypto.randomUUID(),
-                    muralId: slotId,
-                    fromCardId: idMap.get(c.fromCardId) || c.fromCardId,
-                    toCardId: idMap.get(c.toCardId) || c.toCardId
-                  }));
-                  
-                  const newMural = { ...mural, id: slotId, name: `Investigação ${slot}`, cards: newCards, connections: newConns };
-                  save(newMural);
-                  setActiveMuralId(slotId);
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setEditingName(false);
+                  if (tempName.trim() !== "" && tempName !== mural.name) {
+                    save({ ...mural, name: tempName });
+                  }
+                } else if (e.key === 'Escape') {
+                  setEditingName(false);
                 }
               }}
-              title={isActive ? `Slot ${slot} Ativo` : (isSaved ? `Carregar Investigação ${slot} (Botão direito para Sobrescrever com o atual)` : `Slot Vazio (Clique para salvar)`)}
-            >
-              {slot}
-            </button>
-          );
-        })}
+              style={{
+                background: "rgba(0,0,0,0.3)",
+                border: "1px solid var(--accent-primary)",
+                color: "white",
+                padding: "4px 8px",
+                borderRadius: "4px",
+                fontSize: "0.85rem",
+                outline: "none",
+                width: "160px"
+              }}
+            />
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginRight: "0.5rem" }}>
+              <span style={{ color: "var(--text-primary)", fontSize: "0.9rem", fontWeight: 800, textTransform: "uppercase" }}>
+                {mural ? mural.name : "INVESTIGAÇÕES"}
+              </span>
+              {mural && canEdit && (
+                <button 
+                  className="ghost-delete-btn" 
+                  style={{ padding: "2px", opacity: 0.5 }} 
+                  onClick={() => {
+                    setTempName(mural.name);
+                    setEditingName(true);
+                  }}
+                  title="Renomear Investigação"
+                >
+                  ✏️
+                </button>
+              )}
+            </div>
+          )}
+
+          <div style={{ width: "1px", height: "20px", background: "var(--border-subtle)", margin: "0 0.25rem" }}></div>
+
+          {[1, 2, 3, 4, 5, 6].map(slot => {
+            const slotId = isGM ? `gm-slot-${slot}` : `player-slot-${slot}`;
+            const actualMural = murais.find(m => m.id === slotId || (isGM && m.id === `slot-${slot}`));
+            const isSaved = !!actualMural;
+            const actualMuralId = actualMural?.id || slotId;
+            const isActive = activeMuralId === actualMuralId;
+            const muralName = actualMural?.name || `Investigação ${slot}`;
+            
+            return (
+              <button
+                key={slot}
+                className={`btn small-btn ${isActive ? 'primary-btn' : (isSaved ? 'secondary-btn' : 'nav-btn')}`}
+                style={{ width: "36px", height: "36px", padding: 0, borderRadius: "50%" }}
+                onClick={async () => {
+                  if (isSaved) {
+                    setActiveMuralId(actualMuralId);
+                  } else {
+                    // Cria um mural novo e vazio no slot
+                    const newMural: Mural = {
+                      id: slotId,
+                      name: `Investigação ${slot}`,
+                      cards: [], 
+                      connections: [],
+                      createdAt: new Date().toISOString(),
+                      backgroundStyle: 'grid'
+                    };
+                    save(newMural);
+                    setActiveMuralId(slotId);
+                  }
+                }}
+                onContextMenu={async (e) => {
+                  e.preventDefault();
+                  if (!mural) return;
+                  if (await showConfirm({ title: "Sobrescrever Slot", message: `Deseja clonar a investigação atual para o slot ${slot}? (O slot atual permanecerá intacto)`, type: "warning" })) {
+                    const idMap = new Map<string, string>();
+                    const newCards = mural.cards.map(c => {
+                      const newId = crypto.randomUUID();
+                      idMap.set(c.id, newId);
+                      return { ...c, id: newId, muralId: slotId };
+                    });
+                    const newConns = mural.connections.map(c => ({
+                      ...c,
+                      id: crypto.randomUUID(),
+                      muralId: slotId,
+                      fromCardId: idMap.get(c.fromCardId) || c.fromCardId,
+                      toCardId: idMap.get(c.toCardId) || c.toCardId
+                    }));
+                    
+                    const newMural = { ...mural, id: actualMuralId, name: `Investigação ${slot}`, cards: newCards, connections: newConns };
+                    save(newMural);
+                    setActiveMuralId(actualMuralId);
+                  }
+                }}
+                title={isActive ? `${muralName} (Ativo)` : (isSaved ? `Carregar: ${muralName} (Botão direito para Sobrescrever com o atual)` : `Slot Vazio (Clique para salvar)`)}
+              >
+                {slot}
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ 
+          fontSize: "0.7rem", 
+          color: "var(--text-muted)", 
+          background: "rgba(0,0,0,0.6)", 
+          padding: "4px 12px", 
+          borderRadius: "100px", 
+          border: "1px solid rgba(255,255,255,0.05)",
+          backdropFilter: "blur(5px)",
+          letterSpacing: "0.02em",
+          pointerEvents: "none",
+          boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
+        }}>
+          💡 Clique para carregar | Clique com o botão direito para salvar/sobrescrever o mural atual no slot
+        </div>
       </div>
 
       {/* Canvas */}
@@ -352,7 +507,6 @@ export default function MuralCanvas() {
             backgroundPosition: `${pan.x}px ${pan.y}px`,
             cursor: connectingFrom ? "crosshair" : (isPanning ? "grabbing" : "grab"),
           }}
-          onWheel={handleWheel}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -378,7 +532,9 @@ export default function MuralCanvas() {
             }}
           />
           <AnimatePresence mode="popLayout" initial={false}>
-            {visibleCards.map(card => (
+            {visibleCards.map(card => {
+              const cardCanEdit = isGM || (card.authorId ? card.authorId === session?.playerId : card.createdBy === (dadosGlobais.players?.find((p: any) => p.id === session?.playerId)?.name || "Jogador"));
+              return (
               <motion.div
                 key={card.id}
                 layout
@@ -393,8 +549,8 @@ export default function MuralCanvas() {
                   zoom={zoom}
                   pan={pan}
                   isConnecting={connectingFrom === card.id}
-                  canEdit={canEdit}
-                  onCardClick={() => {
+                  canEdit={cardCanEdit}
+                  onCardClick={(resolvedData) => {
                     if (!canEdit || !mural) return;
                     if (connectingFrom === "") {
                       setConnectingFrom(card.id);
@@ -411,6 +567,9 @@ export default function MuralCanvas() {
                       };
                       save(updated);
                       setConnectingFrom(null);
+                    } else {
+                      // Abrir modal de detalhes
+                      setDetailCard(resolvedData ? { ...card, ...resolvedData } : card);
                     }
                   }}
                   onEdit={() => setEditingCardId(card.id)}
@@ -427,7 +586,7 @@ export default function MuralCanvas() {
                   }}
                 />
               </motion.div>
-            ))}
+            )})}
           </AnimatePresence>
         </div>
       </DndContext>
@@ -455,7 +614,8 @@ export default function MuralCanvas() {
                   x: (-pan.x + window.innerWidth / 2) / zoom - 90, 
                   y: (-pan.y + window.innerHeight / 2) / zoom - 50 
                 },
-                createdBy: "gm",
+                createdBy: isGM ? "gm" : (dadosGlobais.players?.find((p: any) => p.id === session?.playerId)?.name || "Jogador"),
+                authorId: isGM ? "gm" : session?.playerId,
                 createdAt: new Date().toISOString()
               } as any;
               const updated = {
@@ -471,6 +631,154 @@ export default function MuralCanvas() {
             setEditingCardId(null);
           }}
         />
+      )}
+
+      {/* Modal de Detalhes do Card */}
+      {detailCard && (
+        <Modal isOpen={!!detailCard} onClose={() => setDetailCard(null)} id="mural-card-detail">
+          {(() => {
+            const isNote = detailCard.type === 'anotacao' || detailCard.type === 'nota';
+            if (isNote) {
+              let noteBg = "linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(180, 83, 9, 0.05) 100%)";
+              let noteBorder = "rgba(251, 191, 36, 0.4)";
+              let noteAccent = "#fcd34d";
+              let noteIcon = "📌";
+              let noteTextColor = "rgba(255,255,255,0.9)";
+              let titleColor = "white";
+
+              if (detailCard.type === 'nota') {
+                noteBg = "linear-gradient(135deg, #fef08a 0%, #fcd34d 100%)";
+                noteBorder = "#eab308";
+                noteAccent = "#92400e";
+                noteIcon = "📝";
+                noteTextColor = "#334155";
+                titleColor = "#1e293b";
+              } else {
+                switch(detailCard.noteType) {
+                  case 'importante':
+                    noteBg = "linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(153, 27, 27, 0.05) 100%)";
+                    noteBorder = "rgba(239, 68, 68, 0.4)";
+                    noteAccent = "#fca5a5";
+                    noteIcon = "❗";
+                    break;
+                  case 'pista':
+                    noteBg = "linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(30, 58, 138, 0.05) 100%)";
+                    noteBorder = "rgba(59, 130, 246, 0.4)";
+                    noteAccent = "#93c5fd";
+                    noteIcon = "🔍";
+                    break;
+                  case 'npc':
+                    noteBg = "linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(88, 28, 135, 0.05) 100%)";
+                    noteBorder = "rgba(168, 85, 247, 0.4)";
+                    noteAccent = "#d8b4fe";
+                    noteIcon = "👤";
+                    break;
+                  case 'missao':
+                    noteBg = "linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(133, 77, 14, 0.05) 100%)";
+                    noteBorder = "rgba(234, 179, 8, 0.4)";
+                    noteAccent = "#fde047";
+                    noteIcon = "⭐";
+                    break;
+                }
+              }
+
+              return (
+                <div className="modal-content modal-md" style={{
+                  background: noteBg,
+                  border: `1px solid ${noteBorder}`,
+                  borderTop: `4px solid ${noteBorder}`,
+                  borderRadius: "2px 8px 8px 8px",
+                  boxShadow: "0 15px 35px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)",
+                  backdropFilter: detailCard.type === 'nota' ? "none" : "blur(10px)",
+                  position: "relative",
+                  padding: "2rem"
+                }}>
+                  <div style={{
+                    position: "absolute",
+                    top: "-8px",
+                    left: "50%",
+                    marginLeft: "-40px",
+                    width: "80px",
+                    height: "20px",
+                    background: "rgba(255, 255, 255, 0.15)",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.2), inset 0 0 2px rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.05)",
+                    backdropFilter: "blur(4px)",
+                    borderRadius: "2px"
+                  }}></div>
+
+                  <header className="modal-header" style={{ padding: 0, marginBottom: "1.5rem", borderBottom: `1px solid ${noteBorder}`, paddingBottom: "1.5rem" }}>
+                    <div className="modal-title-group" style={{ display: "flex", alignItems: "flex-start", gap: "1rem" }}>
+                      <span style={{ fontSize: "2.5rem", filter: "drop-shadow(0 2px 2px rgba(0,0,0,0.5))" }}>{noteIcon}</span>
+                      <div>
+                        <span style={{ fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 800, color: noteAccent, opacity: 0.8, letterSpacing: "0.05em" }}>
+                          {detailCard.type === 'anotacao' ? `ANOTAÇÃO DE ${detailCard.createdBy?.toUpperCase()}` : 'NOTA (POST-IT)'}
+                        </span>
+                        <h2 style={{ margin: 0, fontSize: "1.8rem", color: titleColor, fontWeight: 800, lineHeight: 1.2 }}>{detailCard.liveTitle || detailCard.title || 'Sem Título'}</h2>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                      <button className="close-btn" onClick={() => setDetailCard(null)} style={{ color: titleColor, background: "rgba(0,0,0,0.1)", borderRadius: "50%", padding: "4px" }}>
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </button>
+                    </div>
+                  </header>
+                  <div className="modal-body custom-scrollbar" style={{ padding: 0 }}>
+                    {(detailCard.liveContent || detailCard.content) ? (
+                      <div style={{ minHeight: "150px" }}>
+                        <p style={{ 
+                          margin: 0,
+                          fontSize: "1.2rem", 
+                          lineHeight: 1.7, 
+                          color: noteTextColor, 
+                          whiteSpace: "pre-wrap",
+                          fontFamily: "'Indie Flower', 'Caveat', 'Comic Sans MS', cursive, sans-serif",
+                          letterSpacing: "0.02em"
+                        }}>
+                          {detailCard.liveContent || detailCard.content}
+                        </p>
+                      </div>
+                    ) : (
+                      <div style={{ minHeight: "150px", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.5 }}>
+                        <p style={{ fontStyle: "italic", fontSize: "1.1rem" }}>Nenhum conteúdo escrito.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div className="modal-content glass-panel" style={{ maxWidth: "600px", width: "90%", padding: "1.5rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "0.5rem" }}>
+                  <div>
+                    <div className="narrative-label" style={{ marginBottom: "4px" }}>
+                      {detailCard.type.toUpperCase()}
+                    </div>
+                    <h2 style={{ margin: 0, fontSize: "1.5rem", color: "var(--text-primary)" }}>{detailCard.liveTitle || detailCard.title}</h2>
+                  </div>
+                  <button className="timeline-action" onClick={() => setDetailCard(null)} style={{ fontSize: "1.5rem", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>×</button>
+                </div>
+                
+                <div className="scrollable-area custom-scrollbar" style={{ maxHeight: "60vh", overflowY: "auto", paddingRight: "0.5rem" }}>
+                  {detailCard.imageUrl && (
+                    <img src={detailCard.imageUrl} alt={detailCard.liveTitle || detailCard.title} style={{ width: "100%", borderRadius: "8px", marginBottom: "1rem", border: "1px solid var(--border-subtle)" }} />
+                  )}
+                  {(detailCard.liveContent || detailCard.content) ? (
+                    <div style={{ whiteSpace: "pre-wrap", fontSize: "1rem", lineHeight: 1.6, color: "var(--text-primary)" }}>
+                      {detailCard.liveContent || detailCard.content}
+                    </div>
+                  ) : (
+                    <p style={{ color: "var(--text-muted)", fontStyle: "italic" }}>Sem conteúdo adicional.</p>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+        </Modal>
       )}
     </div>
   );

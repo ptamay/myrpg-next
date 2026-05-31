@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { MuralCard, MuralCardType } from "@/types/cronicas";
 import { useAppContext } from "@/contexts/AppContext";
 import { useSystemDialog } from "@/contexts/SystemDialogContext";
+import { useUserSession } from "@/contexts/UserSessionContext";
 
 interface MuralCardFormProps {
   initialData?: MuralCard | null;
@@ -11,8 +12,32 @@ interface MuralCardFormProps {
 }
 
 export default function MuralCardForm({ initialData, onSave, onCancel }: MuralCardFormProps) {
-  const { dadosGlobais } = useAppContext();
+  const { dadosGlobais, jornadaPorDia } = useAppContext();
+  const { session } = useUserSession();
   const { showAlert } = useSystemDialog();
+
+  // Coletar anotações pessoais do jogador atual
+  const personalNotes: any[] = [];
+  if (session?.playerId) {
+    Object.keys(jornadaPorDia || {}).forEach((dayStr) => {
+      const day = Number(dayStr);
+      const blocos = jornadaPorDia[day]?.blocos || [];
+      blocos.forEach((bloco: any, bIdx: number) => {
+        const pSessions = bloco.playerSessions || {};
+        const pSession = pSessions[session.id];
+        if (pSession && pSession.notes && pSession.notes.length > 0) {
+          pSession.notes.forEach((note: any) => {
+            personalNotes.push({
+              ...note,
+              day,
+              blocoIdx: bIdx
+            });
+          });
+        }
+      });
+    });
+    personalNotes.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
   
   const [type, setType] = useState<MuralCardType>(initialData?.type || "nota");
   const [title, setTitle] = useState(initialData?.title || "");
@@ -42,7 +67,7 @@ export default function MuralCardForm({ initialData, onSave, onCancel }: MuralCa
           setTitle(firstPlayer.name);
         }
       }
-    } else {
+    } else if (type !== 'anotacao') {
       // Para outros tipos (nota, teoria, etc), limpa o refId
       setRefId("");
     }
@@ -59,8 +84,13 @@ export default function MuralCardForm({ initialData, onSave, onCancel }: MuralCa
   };
 
   const handleSave = async () => {
-    if (!title.trim()) {
+    if (!title.trim() && type !== 'anotacao') {
       await showAlert("O título é obrigatório.");
+      return;
+    }
+    
+    if (type === 'anotacao' && !refId) {
+      await showAlert("Selecione uma anotação para importar.");
       return;
     }
     
@@ -68,8 +98,8 @@ export default function MuralCardForm({ initialData, onSave, onCancel }: MuralCa
       type,
       title: title.trim(),
       content: content.trim(),
-      refId: (type === 'npc' || type === 'jogador') ? refId : undefined,
-      imageUrl: (type === 'artefato' || type === 'retrato') ? imageUrl : undefined,
+      refId: (type === 'npc' || type === 'jogador' || type === 'anotacao') ? refId : undefined,
+      imageUrl: (type === 'artefato' || type === 'retrato' || type === 'anotacao') ? imageUrl : undefined,
     });
   };
 
@@ -101,6 +131,7 @@ export default function MuralCardForm({ initialData, onSave, onCancel }: MuralCa
               <option value="artefato">Artefato</option>
               <option value="teoria">Teoria</option>
               <option value="retrato">Retrato (Sem ficha)</option>
+              <option value="anotacao">Minhas Anotações</option>
             </select>
           </div>
 
@@ -144,8 +175,33 @@ export default function MuralCardForm({ initialData, onSave, onCancel }: MuralCa
             </div>
           )}
 
-          <div>
-            <label className="narrative-label">TÍTULO</label>
+          {type === 'anotacao' && (
+            <div>
+              <label className="narrative-label">SELECIONE A ANOTAÇÃO DA SESSÃO</label>
+              <select 
+                className="journey-input modern-input" 
+                style={{ width: "100%", marginTop: "4px" }}
+                value={refId}
+                onChange={(e) => {
+                  setRefId(e.target.value);
+                  const n = personalNotes.find((x: any) => String(x.id) === String(e.target.value));
+                  if (n) {
+                    setTitle(n.title || `Anotação (Dia ${n.day})`);
+                    setContent(n.desc || "");
+                  }
+                }}
+              >
+                <option value="">-- Selecione uma anotação --</option>
+                {personalNotes?.map((n: any) => (
+                  <option key={n.id} value={String(n.id)}>{n.title || `Sem título (Dia ${n.day})`}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {type !== 'anotacao' && (
+            <div>
+              <label className="narrative-label">TÍTULO</label>
             <input 
               type="text" 
               className="journey-input modern-input" 
@@ -155,7 +211,9 @@ export default function MuralCardForm({ initialData, onSave, onCancel }: MuralCa
               placeholder="Ex: Suspeito principal"
             />
           </div>
+          )}
 
+          {type !== 'anotacao' && (
           <div>
             <label className="narrative-label">CONTEÚDO {type === 'npc' || type === 'jogador' || type === 'retrato' ? '(OPCIONAL)' : ''}</label>
             <textarea 
@@ -167,11 +225,12 @@ export default function MuralCardForm({ initialData, onSave, onCancel }: MuralCa
               placeholder="Anotações sobre este card..."
             />
           </div>
+          )}
 
-          {(type === 'artefato' || type === 'retrato') && (
+          {(type === 'artefato' || type === 'retrato' || type === 'anotacao') && (
             <div>
               <label className="diario-image-upload-label" style={{ marginBottom: "8px" }}>
-                <span>📷 Imagem do {type === 'artefato' ? 'Artefato' : 'Retrato'}</span>
+                <span>📷 Imagem do {type === 'artefato' ? 'Artefato' : (type === 'anotacao' ? 'Anexo' : 'Retrato')}</span>
                 <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageUpload} />
               </label>
               {imageUrl && (

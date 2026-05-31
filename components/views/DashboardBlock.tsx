@@ -510,18 +510,129 @@ export default function DashboardBlock() {
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Add
             </button>
           </div>
-          <div className="world-cards-grid">
-            {(session?.id && bData.playerSessions?.[session.id]?.notes?.length > 0) ? bData.playerSessions[session.id].notes.map((n: any, i: number) => (
-              <div key={i} className="modern-card clickable-card world-compact-card" onClick={() => openPersonalNote(i)}>
-                <div className="world-card-header">
-                  <h5 className="world-card-title">{n.title || 'Sem Título'}</h5>
+          <div className="world-cards-grid" style={{ padding: "8px 4px 8px 12px" }}>
+            {(session?.id && bData.playerSessions?.[session.id]?.notes?.length > 0) ? bData.playerSessions[session.id].notes.map((n: any, i: number) => {
+              
+              // Definir cores baseadas no tipo de anotação
+              let noteBg = "rgba(255, 255, 255, 0.03)";
+              let noteBorder = "rgba(255, 255, 255, 0.1)";
+              let noteAccent = "var(--text-muted)";
+              let noteIcon = "📝";
+              let rotation = 0; // Sem rotação
+
+              switch(n.type) {
+                case 'importante':
+                  noteBg = "linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(153, 27, 27, 0.05) 100%)";
+                  noteBorder = "rgba(239, 68, 68, 0.4)";
+                  noteAccent = "#fca5a5";
+                  noteIcon = "❗";
+                  break;
+                case 'pista':
+                  noteBg = "linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(30, 58, 138, 0.05) 100%)";
+                  noteBorder = "rgba(59, 130, 246, 0.4)";
+                  noteAccent = "#93c5fd";
+                  noteIcon = "🔍";
+                  break;
+                case 'npc':
+                  noteBg = "linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(88, 28, 135, 0.05) 100%)";
+                  noteBorder = "rgba(168, 85, 247, 0.4)";
+                  noteAccent = "#d8b4fe";
+                  noteIcon = "👤";
+                  break;
+                case 'missao':
+                  noteBg = "linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(133, 77, 14, 0.05) 100%)";
+                  noteBorder = "rgba(234, 179, 8, 0.4)";
+                  noteAccent = "#fde047";
+                  noteIcon = "⭐";
+                  break;
+                case 'padrao':
+                default:
+                  noteBg = "linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(180, 83, 9, 0.05) 100%)";
+                  noteBorder = "rgba(251, 191, 36, 0.4)";
+                  noteAccent = "#fcd34d";
+                  noteIcon = "📌";
+                  break;
+              }
+
+              return (
+              <div 
+                key={i} 
+                onClick={() => openPersonalNote(i)}
+                style={{
+                  background: noteBg,
+                  border: `1px solid ${noteBorder}`,
+                  borderTop: `4px solid ${noteBorder}`,
+                  borderRadius: "2px 8px 8px 8px",
+                  padding: "1rem",
+                  position: "relative",
+                  transform: "none",
+                  transition: "all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)",
+                  boxShadow: "0 6px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)",
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.5rem",
+                  zIndex: 1,
+                  backdropFilter: "blur(4px)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-6px) scale(1.03)";
+                  e.currentTarget.style.boxShadow = "0 15px 25px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)";
+                  e.currentTarget.style.zIndex = "10";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "none";
+                  e.currentTarget.style.boxShadow = "0 6px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)";
+                  e.currentTarget.style.zIndex = "1";
+                }}
+              >
+                {/* Tape effect at the top */}
+                <div style={{
+                  position: "absolute",
+                  top: "-8px",
+                  left: "50%",
+                  marginLeft: "-20px",
+                  width: "40px",
+                  height: "14px",
+                  background: "rgba(255, 255, 255, 0.15)",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.2), inset 0 0 2px rgba(255,255,255,0.1)",
+                  border: "1px solid rgba(255,255,255,0.05)",
+                  backdropFilter: "blur(2px)",
+                  transformOrigin: "center",
+                  transform: "none",
+                  borderRadius: "1px"
+                }}></div>
+                
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px" }}>
+                  <h5 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 800, color: noteAccent, lineHeight: 1.3 }}>
+                    {n.title || 'Sem Título'}
+                  </h5>
+                  <span style={{ fontSize: "1.1rem", filter: "drop-shadow(0 2px 2px rgba(0,0,0,0.5))" }}>{noteIcon}</span>
                 </div>
-                <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: 0, fontStyle: "italic", marginTop: "0.5rem", paddingTop: "0.5rem", borderTop: "1px dashed var(--border-subtle)" }}>
-                  {n.desc ? (n.desc.length > 60 ? n.desc.substring(0, 60) + '…' : n.desc) : 'Sem conteúdo.'}
-                </p>
-                <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: "0.5rem", display: "block", opacity: 0.6 }}>Clique para editar</span>
+                
+                <div style={{ 
+                  flex: 1, 
+                  fontSize: "0.9rem", 
+                  color: "rgba(255,255,255,0.85)", 
+                  lineHeight: 1.5, 
+                  fontFamily: "'Indie Flower', 'Caveat', 'Comic Sans MS', cursive, sans-serif",
+                  letterSpacing: "0.02em",
+                  borderTop: `1px solid ${noteBorder}`,
+                  paddingTop: "0.5rem",
+                  marginTop: "0.25rem",
+                  whiteSpace: "pre-wrap"
+                }}>
+                  {n.desc ? (n.desc.length > 80 ? n.desc.substring(0, 80) + '...' : n.desc) : <span style={{opacity: 0.5, fontStyle: "italic"}}>Nenhum conteúdo</span>}
+                </div>
+                
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.25rem" }}>
+                  <span style={{ fontSize: "0.6rem", color: noteAccent, opacity: 0.5, textTransform: "uppercase", fontWeight: 800, letterSpacing: "0.05em" }}>
+                    ABRIR ANOTAÇÃO
+                  </span>
+                </div>
               </div>
-            )) : <p className="text-muted text-center py-2" style={{ fontSize: "0.8rem" }}>Nenhuma anotação registrada para este momento.</p>}
+            );
+            }) : <p className="text-muted text-center py-2" style={{ fontSize: "0.8rem" }}>Nenhuma anotação registrada para este momento.</p>}
           </div>
         </div>
 

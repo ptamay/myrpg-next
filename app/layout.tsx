@@ -4,7 +4,13 @@ import { AppProvider } from "@/contexts/AppContext";
 import { SystemDialogProvider } from "@/contexts/SystemDialogContext";
 import { Inter } from "next/font/google";
 import GlobalScripts from "@/components/GlobalScripts";
-import "./globals.css";
+import "./styles/base.css";
+import "./styles/components.css";
+import "./styles/dashboard.css";
+import "./styles/players-npcs.css";
+import "./styles/modals.css";
+import "./styles/blocks.css";
+import "./styles/quests-weather.css";
 
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
 

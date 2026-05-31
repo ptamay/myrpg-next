@@ -28,6 +28,7 @@ export type MuralCardType =
   | 'artefato'  // Item físico com imagem
   | 'teoria'    // Hipótese do grupo
   | 'retrato'   // Imagem + nome (pessoa sem NPC cadastrado)
+  | 'anotacao'  // Anotação de jogador
 
 export interface MuralCard {
   id: string
@@ -39,6 +40,7 @@ export interface MuralCard {
   refId?: string                    // ID do NPC se type === 'npc'
   position: { x: number; y: number }
   createdBy: string                 // 'gm' ou characterId
+  authorId?: string                 // ID do jogador que criou (para edição restrita)
   createdAt: string
 }
 

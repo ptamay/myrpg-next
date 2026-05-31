@@ -8,7 +8,7 @@ import { SAVES_MAP, SKILLS_MAP } from "@/lib/dndConstants";
 import { Player } from "@/lib/gameData";
 
 export default function MeuPerfilView() {
-  const { dadosGlobais, setDadosGlobais, salvarEstadoLocal } = useAppContext();
+  const { dadosGlobais, setDadosGlobais, salvarEstadoLocal, setActiveData, setModals } = useAppContext();
   const { session } = useUserSession();
   
   const player = dadosGlobais.players?.find((p: any) => p.id === session?.playerId);
@@ -84,7 +84,19 @@ export default function MeuPerfilView() {
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "1.25rem", minWidth: 0 }}>
           
           {/* Cabeçalho do Perfil Compacto */}
-          <div className="glass-panel" style={{ padding: "1.25rem", display: "flex", gap: "1.5rem", alignItems: "center", borderRadius: "12px" }}>
+          <div className="glass-panel" style={{ padding: "1.25rem", display: "flex", gap: "1.5rem", alignItems: "center", borderRadius: "12px", position: "relative" }}>
+            <div style={{ position: "absolute", top: "1.25rem", right: "1.25rem" }}>
+              <button 
+                className="btn primary-btn small-btn" 
+                onClick={() => {
+                  setActiveData(player);
+                  setModals((prev: any) => ({ ...prev, playerForm: true }));
+                }}
+              >
+                Editar Ficha
+              </button>
+            </div>
+            
             {player.image ? (
               <img src={player.image} alt={player.name} style={{ width: "90px", height: "90px", borderRadius: "50%", objectFit: "cover", border: "3px solid var(--border-subtle)" }} />
             ) : (
@@ -93,7 +105,7 @@ export default function MeuPerfilView() {
               </div>
             )}
             
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ flex: 1, minWidth: 0, paddingRight: "100px" }}>
               <h1 style={{ margin: "0 0 0.25rem 0", fontSize: "1.8rem", fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{player.name}</h1>
               <p style={{ margin: "0 0 0.75rem 0", fontSize: "0.95rem", color: "var(--text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {player.playerClass || player.classLevel || 'Sem classe'} {player.playerLevel ? `Nv. ${player.playerLevel}` : ''} • {player.race || 'Desconhecida'}

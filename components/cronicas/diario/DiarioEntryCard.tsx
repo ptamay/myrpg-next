@@ -31,6 +31,7 @@ export default function DiarioEntryCard({
   const avatar = player?.image;
 
   const hasLiked = entry.likes?.includes(currentUserId);
+  const displayName = entry.authorId === 'gm' ? 'Mestre' : (player ? player.name : entry.authorName);
 
   // Calcula tempo atrás de forma simples
   const getTempoAtras = (dateString: string) => {
@@ -77,7 +78,7 @@ export default function DiarioEntryCard({
     return (
       <div className="timeline-item">
         <div className="timeline-avatar-wrapper">
-          {avatar ? <img src={avatar} alt={entry.authorName} /> : <div className="diario-avatar-placeholder">{entry.authorName.charAt(0).toUpperCase()}</div>}
+          {avatar ? <img src={avatar} alt={displayName} /> : <div className="diario-avatar-placeholder">{displayName.charAt(0).toUpperCase()}</div>}
         </div>
         <div className="timeline-card" style={{ padding: "0.5rem" }}>
           <DiarioEntryForm
@@ -99,10 +100,10 @@ export default function DiarioEntryCard({
     <div className="timeline-item">
       <div className="timeline-avatar-wrapper">
         {avatar ? (
-          <img src={avatar} alt={entry.authorName} />
+          <img src={avatar} alt={displayName} />
         ) : (
           <div className="diario-avatar-placeholder">
-            {entry.authorName.charAt(0).toUpperCase()}
+            {displayName.charAt(0).toUpperCase()}
           </div>
         )}
       </div>
@@ -112,7 +113,7 @@ export default function DiarioEntryCard({
         <div className="timeline-post-block" onClick={() => setShowDetailModal(true)}>
           <div className="timeline-header">
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <span className="timeline-author">{player ? player.name : entry.authorName}</span>
+              <span className="timeline-author">{displayName}</span>
               <span className="timeline-meta">{getTempoAtras(entry.createdAt)}</span>
             </div>
             {canDelete && (
@@ -210,15 +211,15 @@ export default function DiarioEntryCard({
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
               <div className="timeline-avatar-wrapper" style={{ margin: 0 }}>
                 {avatar ? (
-                  <img src={avatar} alt={entry.authorName} style={{ width: "40px", height: "40px", borderRadius: "50%" }} />
+                  <img src={avatar} alt={displayName} style={{ width: "40px", height: "40px", borderRadius: "50%" }} />
                 ) : (
                   <div className="diario-avatar-placeholder" style={{ width: "40px", height: "40px", fontSize: "1rem" }}>
-                    {entry.authorName.charAt(0).toUpperCase()}
+                    {displayName.charAt(0).toUpperCase()}
                   </div>
                 )}
               </div>
               <div style={{ display: "flex", flexDirection: "column" }}>
-                <span className="timeline-author" style={{ fontSize: "1rem" }}>{player ? player.name : entry.authorName}</span>
+                <span className="timeline-author" style={{ fontSize: "1rem" }}>{displayName}</span>
                 <span className="timeline-meta" style={{ fontSize: "0.75rem" }}>{getTempoAtras(entry.createdAt)}</span>
               </div>
             </div>
@@ -264,7 +265,7 @@ export default function DiarioEntryCard({
                       <div key={c.id} style={{ background: "hsla(0,0%,100%,0.02)", padding: "0.75rem", borderRadius: "var(--radius-sm)", border: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem" }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-                            <span style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-primary)" }}>{c.authorName}</span>
+                            <span style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--text-primary)" }}>{c.authorId === 'gm' ? 'Mestre' : c.authorName}</span>
                             <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{getTempoAtras(c.createdAt)}</span>
                           </div>
                           <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", whiteSpace: "pre-wrap" }}>{c.content}</div>

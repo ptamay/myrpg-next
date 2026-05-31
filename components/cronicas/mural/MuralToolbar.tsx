@@ -10,6 +10,7 @@ interface MuralToolbarProps {
   onExportImage?: () => void;
   currentBackground?: string;
   onChangeBackground?: (bg: string) => void;
+  onRecenter?: () => void;
 }
 
 export default function MuralToolbar({
@@ -21,7 +22,8 @@ export default function MuralToolbar({
   onToggleConnect,
   onExportImage,
   currentBackground = 'grid',
-  onChangeBackground
+  onChangeBackground,
+  onRecenter
 }: MuralToolbarProps) {
   const backgrounds = ['grid', 'dark-paper', 'wood'];
   const bgNames: Record<string, string> = { 
@@ -59,6 +61,12 @@ export default function MuralToolbar({
       
       <div style={{ width: "60%", height: "1px", background: "var(--border-subtle)", margin: "0.5rem 0" }} />
       
+      {onRecenter && (
+        <button className="nav-btn" onClick={onRecenter} title="Centralizar Mural (0,0)">
+          🎯
+        </button>
+      )}
+
       <button className="nav-btn" onClick={onZoomIn} title="Zoom In">
         +
       </button>

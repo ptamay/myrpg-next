@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useUserSession } from "@/contexts/UserSessionContext";
 import { blocosDeTempo } from "@/lib/gameData";
@@ -60,9 +61,14 @@ export default function DashboardView() {
     }
   };
 
-  const maxDayInJornada = Object.keys(jornadaPorDia).length > 0 ? Math.max(...Object.keys(jornadaPorDia).map(Number)) : 0;
-  const totalDays = Math.max(6, diaAtual, maxDayInJornada);
-  const daysArray = Array.from({ length: totalDays }, (_, i) => i + 1);
+  const totalDays = useMemo(() => {
+    const maxDayInJornada = Object.keys(jornadaPorDia).length > 0 ? Math.max(...Object.keys(jornadaPorDia).map(Number)) : 0;
+    return Math.max(6, diaAtual, maxDayInJornada);
+  }, [jornadaPorDia, diaAtual]);
+
+  const daysArray = useMemo(() => {
+    return Array.from({ length: totalDays }, (_, i) => i + 1);
+  }, [totalDays]);
 
   const handleAddDay = () => {
     const nextDay = totalDays + 1;

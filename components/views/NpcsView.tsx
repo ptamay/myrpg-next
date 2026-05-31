@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAppContext } from "@/contexts/AppContext";
 import { useUserSession } from "@/contexts/UserSessionContext";
 import NpcCard from "./NpcCard";
@@ -16,6 +16,38 @@ export default function NpcsView() {
   const [combatMode, setCombatMode] = useState(false);
   const [hideEffects, setHideEffects] = useState(true);
   const [showFilters, setShowFilters] = useState(true);
+  
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm), 200);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  const filteredNpcs = useMemo(() => {
+    return dadosGlobais.npcs
+      .filter((npc: any) => {
+        if (!isGM && npc.isHidden) return false;
+        
+        if (debouncedSearch && !npc.name.toLowerCase().includes(debouncedSearch.toLowerCase()) && 
+            !npc.title?.toLowerCase().includes(debouncedSearch.toLowerCase()) && 
+            !npc.faction?.toLowerCase().includes(debouncedSearch.toLowerCase())) return false;
+        
+        if (activeFilter === "all") return isGM ? !npc.isHidden : true;
+        if (activeFilter === "dead") return npc.isDead;
+        if (activeFilter === "hidden") return npc.isHidden;
+        
+        if (npc.isDead || npc.isHidden) return false;
+        if (activeFilter === "ally") return npc.faction === "ally";
+        if (activeFilter === "neutral") return npc.faction === "neutral" || !npc.faction;
+        if (activeFilter === "enemy") return npc.faction === "enemy";
+        return true;
+      })
+      .sort((a: any, b: any) => {
+        const aDead = a.isDead ? 1 : 0;
+        const bDead = b.isDead ? 1 : 0;
+        return aDead - bDead;
+      });
+  }, [dadosGlobais.npcs, debouncedSearch, activeFilter, isGM]);
   
   const handleExport = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dadosGlobais.npcs, null, 2));
@@ -166,7 +198,7 @@ export default function NpcsView() {
 
       <div className="npc-cards-wrapper scrollable-area">
         <div className="npc-cards-grid">
-          {dadosGlobais.npcs.length === 0 ? (
+          {filteredNpcs.length === 0 ? (
             <div className="empty-state">
               <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -177,34 +209,11 @@ export default function NpcsView() {
               <p>Nenhum NPC encontrado.</p>
             </div>
           ) : (
-            dadosGlobais.npcs
-              .filter((npc: any) => {
-                if (!isGM && npc.isHidden) return false;
-                
-                if (searchTerm && !npc.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
-                    !npc.title?.toLowerCase().includes(searchTerm.toLowerCase()) && 
-                    !npc.faction?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-                
-                if (activeFilter === "all") return isGM ? !npc.isHidden : true;
-                if (activeFilter === "dead") return npc.isDead;
-                if (activeFilter === "hidden") return npc.isHidden;
-                
-                if (npc.isDead || npc.isHidden) return false;
-                if (activeFilter === "ally") return npc.faction === "ally";
-                if (activeFilter === "neutral") return npc.faction === "neutral" || !npc.faction;
-                if (activeFilter === "enemy") return npc.faction === "enemy";
-                return true;
-              })
-              .sort((a: any, b: any) => {
-                const aDead = a.isDead ? 1 : 0;
-                const bDead = b.isDead ? 1 : 0;
-                return aDead - bDead;
-              })
-              .map((npc: any) => (
-                isGM 
-                  ? <NpcCard key={npc.id} npc={npc} combatMode={combatMode} hideEffects={hideEffects} />
-                  : <NpcCardPlayer key={npc.id} npc={npc} />
-              ))
+            filteredNpcs.map((npc: any) => (
+              isGM 
+                ? <NpcCard key={npc.id} npc={npc} combatMode={combatMode} hideEffects={hideEffects} />
+                : <NpcCardPlayer key={npc.id} npc={npc} />
+            ))
           )}
         </div>
       </div>

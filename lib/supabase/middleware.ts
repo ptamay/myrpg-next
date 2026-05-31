@@ -47,10 +47,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Se for ajuste, precisa verificar se é GM. Vamos redirecionar por segurança na UI ou client-side
-  // Mas aqui no middleware é mais seguro. Se for /ajustes e o user estiver logado, checa profile.
-  if (user && request.nextUrl.pathname.startsWith('/ajustes')) {
-    // Note: This adds a query on every hit to /ajustes.
+  // Se for ajuste ou usuarios, precisa verificar se é GM.
+  if (user && (request.nextUrl.pathname.startsWith('/ajustes') || request.nextUrl.pathname.startsWith('/usuarios'))) {
+    // Note: This adds a query on every hit to these routes.
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
     const role = profile?.role
     if (role === 'player') {

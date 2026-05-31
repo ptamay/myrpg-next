@@ -40,7 +40,7 @@ export function useDiario() {
     fetchEntries();
 
     const supabase = createClient();
-    const channel = supabase.channel(`diary_sync_${Date.now()}`)
+    const channel = supabase.channel(`diary_sync`)
       .on("postgres_changes", { event: "*", schema: "public", table: "diary_entries" }, () => {
         fetchEntries();
       })
@@ -160,7 +160,7 @@ export function useMurais() {
     fetchMurais();
 
     const supabase = createClient();
-    const channel = supabase.channel(`murals_sync_${Date.now()}`)
+    const channel = supabase.channel(`murals_sync`)
       .on("postgres_changes", { event: "*", schema: "public", table: "murals" }, () => { fetchMurais(); })
       .on("postgres_changes", { event: "*", schema: "public", table: "mural_cards" }, () => { fetchMurais(); })
       .on("postgres_changes", { event: "*", schema: "public", table: "mural_connections" }, () => { fetchMurais(); })
@@ -185,10 +185,7 @@ export function useMurais() {
       });
       if (mErr) throw mErr;
 
-      // Delete old cards and links
-      await supabase.from('mural_connections').delete().eq('mural_id', mural.id);
-      await supabase.from('mural_cards').delete().eq('mural_id', mural.id);
-      
+      // Upsert and delete cards
       if (mural.cards && mural.cards.length > 0) {
         const cardsToInsert = mural.cards.map(c => ({
           id: c.id,
@@ -203,9 +200,14 @@ export function useMurais() {
           pos_y: c.position.y,
           created_by: c.createdBy
         }));
-        await supabase.from('mural_cards').insert(cardsToInsert);
+        await supabase.from('mural_cards').upsert(cardsToInsert);
+        const cardIds = mural.cards.map(c => c.id);
+        await supabase.from('mural_cards').delete().eq('mural_id', mural.id).not('id', 'in', `(${cardIds.join(',')})`);
+      } else {
+        await supabase.from('mural_cards').delete().eq('mural_id', mural.id);
       }
       
+      // Upsert and delete connections
       if (mural.connections && mural.connections.length > 0) {
         const connsToInsert = mural.connections.map(c => ({
           id: c.id,
@@ -216,7 +218,11 @@ export function useMurais() {
           label: c.label,
           color: c.color
         }));
-        await supabase.from('mural_connections').insert(connsToInsert);
+        await supabase.from('mural_connections').upsert(connsToInsert);
+        const connIds = mural.connections.map(c => c.id);
+        await supabase.from('mural_connections').delete().eq('mural_id', mural.id).not('id', 'in', `(${connIds.join(',')})`);
+      } else {
+        await supabase.from('mural_connections').delete().eq('mural_id', mural.id);
       }
 
       setMurais(prev => {

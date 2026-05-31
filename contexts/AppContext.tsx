@@ -87,8 +87,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!syncLoading) {
       setJornadaPorDia((prev) => {
-        // Se já houver dados para o dia 1, consideramos que a jornada já foi inicializada
-        if (prev[1] && prev[1].blocos) return prev;
+        // Só inicializa se não vier NADA do banco
+        if (Object.keys(prev).length > 0) return prev;
         
         return getInitialJornada();
       });
