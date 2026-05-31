@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ModalProps {
   isOpen: boolean;
@@ -20,30 +21,48 @@ export default function Modal({ isOpen, onClose, children, id }: ModalProps) {
   if (!mounted) return null;
 
   return createPortal(
-    <div
-      id={id}
-      className={`modal-overlay ${isOpen ? "active" : ""}`}
-      style={{
-        display: isOpen ? "flex" : "none",
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100%",
-        zIndex: 10000,
-        justifyContent: "center",
-        alignItems: "center",
-        background: "rgba(10, 10, 15, 0.7)",
-        backdropFilter: "blur(5px)",
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      {children}
-    </div>,
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          id={id}
+          className="modal-overlay active"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            zIndex: 10000,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            background: "rgba(10, 10, 15, 0.75)",
+            backdropFilter: "blur(8px)",
+            pointerEvents: "auto",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              onClose();
+            }
+          }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            style={{ width: "100%", display: "flex", justifyContent: "center" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {children}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
     document.body
   );
 }

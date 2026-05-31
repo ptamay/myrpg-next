@@ -6,16 +6,23 @@ import { useUserSession } from "@/contexts/UserSessionContext";
 import { blocosDeTempo } from "@/lib/gameData";
 import CelestialIcon from "../ui/CelestialIcon";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 
 export default function DashboardBlock() {
   const { diaAtual, indiceBlocoAtivo, jornadaPorDia, setJornadaPorDia, dadosGlobais, setDadosGlobais, setModals, setActiveData, salvarEstadoLocal } = useAppContext();
   const { isGM, session } = useUserSession();
   const router = useRouter();
-  const supabaseUrlCache = React.useRef<Record<string, string>>({});
 
   const dayData = jornadaPorDia[diaAtual];
-  if (!dayData || !dayData.blocos) return null;
+  if (!dayData || !dayData.blocos) {
+    return (
+      <div className="dash-active-block-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '400px' }}>
+        <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+          <div className="pulse-indicator" style={{ display: 'inline-block', marginBottom: '1rem', width: '16px', height: '16px' }}></div>
+          <p>Sincronizando dados ou aguardando inicialização da jornada...</p>
+        </div>
+      </div>
+    );
+  }
 
   const bData = dayData.blocos[indiceBlocoAtivo];
 
@@ -48,16 +55,6 @@ export default function DashboardBlock() {
     if (b.id === session?.playerId) return 1;
     return 0;
   });
-
-  const getAvatarUrl = React.useCallback((img: string) => {
-    if (!img) return "";
-    if (img.startsWith("http") || img.startsWith("data:")) return img;
-    if (supabaseUrlCache.current[img]) return supabaseUrlCache.current[img];
-    const supabase = createClient();
-    const url = supabase.storage.from("images").getPublicUrl(img).data.publicUrl;
-    supabaseUrlCache.current[img] = url;
-    return url;
-  }, []);
 
   const updateWeather = (weather: string) => {
     const newJornada = structuredClone(jornadaPorDia);
@@ -394,10 +391,8 @@ export default function DashboardBlock() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
                   <div style={{ position: "relative", width: "48px", height: "48px", borderRadius: "50%", overflow: "hidden", border: '2px solid rgba(255,255,255,0.1)' }}>
-                    {player.image ? (
-                      <img src={getAvatarUrl(player.image)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", filter: player.isDead ? "grayscale(100%)" : "none" }} />
-                    ) : (
-                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.05)", fontWeight: "bold", fontSize: "1.2rem", color: "var(--text-muted)" }}>{player.name.charAt(0).toUpperCase()}</div>
+                    {player.image ? <img src={player.image} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (
+                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.05)", fontWeight: "bold", fontSize: "1.2rem", color: "var(--text-muted)" }}>{(player.name || "?").charAt(0).toUpperCase()}</div>
                     )}
                     {isDone && <div style={{ position: "absolute", bottom: 0, right: 0, background: "#10b981", width: "14px", height: "14px", borderRadius: "50%", border: "2px solid #000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.5rem", color: "#fff", fontWeight: "bold", zIndex: 2 }}>✓</div>}
                     {player.isDead && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1 }}><span style={{ fontSize: "1.5rem" }}>💀</span></div>}
@@ -463,17 +458,18 @@ export default function DashboardBlock() {
 
               {/* FOOTER: Time and Exhaustion */}
               <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "2px" }}>
-                {isGM ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.75rem", color: remainingTime < 0 ? "#ef4444" : "var(--text-muted)" }}>
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    <strong>{Math.floor(Math.abs(remainingTime)/60)}h {Math.abs(remainingTime)%60}m {remainingTime < 0 ? 'excedidos' : 'restantes'}</strong> no bloco
-                  </div>
-                ) : (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+                  {isGM && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.75rem", color: remainingTime < 0 ? "#ef4444" : "var(--text-muted)" }}>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                      <strong>{Math.floor(Math.abs(remainingTime)/60)}h {Math.abs(remainingTime)%60}m {remainingTime < 0 ? 'excedidos' : 'restantes'}</strong>
+                    </div>
+                  )}
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.75rem", color: "var(--text-muted)" }}>
                     <span style={{ fontSize: "0.95rem" }}>💤</span>
                     <span>Total de Sono Hoje: <strong style={{ color: "var(--text-primary)" }}>{totalSleepHours}h</strong> <span style={{fontSize: "0.75rem"}}>/ {player.minSleepReq || 8}h mín</span></span>
                   </div>
-                )}
+                </div>
 
                 {(player.exhaustionLevel || 0) > 0 && (
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(239,68,68,0.1)", padding: "6px 10px", borderRadius: "6px", borderLeft: "3px solid #ef4444", marginTop: "4px" }}>

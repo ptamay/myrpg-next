@@ -13,58 +13,159 @@ interface PlayerFormModalProps {
   onClose: () => void;
 }
 
-export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProps) {
-  const SAVES_LIST = ["FOR", "DES", "CON", "INT", "SAB", "CAR"];
-  const SKILLS_LIST = [
-    "Acrobacia (Des)", "Arcanismo (Int)", "Atletismo (For)", "Atuação (Car)", 
-    "Enganação (Car)", "Furtividade (Des)", "História (Int)", "Intimidação (Car)", 
-    "Intuição (Sab)", "Investigação (Int)", "Lidar c/ Animais (Sab)", "Medicina (Sab)", 
-    "Natureza (Int)", "Percepção (Sab)", "Persuasão (Car)", "Prestidigitação (Des)", 
-    "Religião (Int)", "Sobrevivência (Sab)"
+const initialFormState = {
+  name: "",
+  playerClass: "",
+  playerLevel: "1",
+  race: "",
+  str: "10",
+  dex: "10",
+  con: "10",
+  int: "10",
+  wis: "10",
+  cha: "10",
+  hpMax: "",
+  ac: "",
+  init: "",
+  speed: "",
+  perc: "",
+  hdTotal: "",
+  inspiration: false,
+  minSleepReq: "8",
+  profBonus: "2"
+};
+
+const SAVES_LIST = ["FOR", "DES", "CON", "INT", "SAB", "CAR"];
+const SKILLS_LIST = [
+  "Acrobacia (Des)", "Arcanismo (Int)", "Atletismo (For)", "Atuação (Car)", 
+  "Enganação (Car)", "Furtividade (Des)", "História (Int)", "Intimidação (Car)", 
+  "Intuição (Sab)", "Investigação (Int)", "Lidar c/ Animais (Sab)", "Medicina (Sab)", 
+  "Natureza (Int)", "Percepção (Sab)", "Persuasão (Car)", "Prestidigitação (Des)", 
+  "Religião (Int)", "Sobrevivência (Sab)"
+];
+
+const dataToFormState = (data: any) => ({
+  name: data?.name || "",
+  playerClass: data?.playerClass || data?.classLevel || "",
+  playerLevel: data?.playerLevel?.toString() || "1",
+  race: data?.race || "",
+  str: data?.str?.toString() || "10",
+  dex: data?.dex?.toString() || "10",
+  con: data?.con?.toString() || "10",
+  int: data?.int?.toString() || "10",
+  wis: data?.wis?.toString() || "10",
+  cha: data?.cha?.toString() || "10",
+  hpMax: data?.hpMax?.toString() || "",
+  ac: data?.ac?.toString() || "",
+  init: data?.init || "",
+  speed: data?.speed || "",
+  perc: data?.perc?.toString() || "",
+  hdTotal: data?.hdTotal || "",
+  inspiration: data?.inspiration || false,
+  minSleepReq: data?.minSleepReq?.toString() || "8",
+  profBonus: data?.profBonus?.toString().replace('+', '') || "2"
+});
+
+const dataToAttacks = (data: any) => {
+  if (data?.attacks && data.attacks.length > 0) {
+    const currentAttacks = [...data.attacks];
+    while (currentAttacks.length < 3) currentAttacks.push({ name: "", bonus: "", dmg: "" });
+    return currentAttacks;
+  }
+  return [
+    { name: "", bonus: "", dmg: "" },
+    { name: "", bonus: "", dmg: "" },
+    { name: "", bonus: "", dmg: "" }
   ];
+};
+
+const dataToSaves = (data: any) => Array.isArray(data?.saves) ? data.saves : (typeof data?.saves === 'string' && data.saves ? data.saves.split(',').map((s:string) => s.trim()) : []);
+const dataToSkills = (data: any) => Array.isArray(data?.skills) ? data.skills : (typeof data?.skills === 'string' && data.skills ? data.skills.split(',').map((s:string) => s.trim()) : []);
+
+export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProps) {
   const { dadosGlobais, setDadosGlobais, salvarEstadoLocal, activeData } = useAppContext();
   const { showAlert } = useSystemDialog();
-  const { isGM } = useUserSession();
+  const { isGM, session } = useUserSession();
 
+  // Bloqueia renderização se não for GM e não for dono
+  if (isOpen && activeData && !isGM && activeData.id !== session?.playerId) {
+    return null;
+  }
+
+  // General States
+  const [profiles, setProfiles] = useState<any[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [isImporting, setIsImporting] = useState(false);
+
+  // Original Form States
+  const [formState, setFormState] = useState(initialFormState);
   const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
-  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
-  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [attacksState, setAttacksState] = useState<any[]>([]);
   const [selectedSaves, setSelectedSaves] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
-  const [profBonusState, setProfBonusState] = useState<string>("2");
+
+  // Transformation States
+  const [hasTransformation, setHasTransformation] = useState(false);
+  const [isEditingTransformation, setIsEditingTransformation] = useState(false);
+  const [transFormState, setTransFormState] = useState(initialFormState);
+  const [transAvatarBase64, setTransAvatarBase64] = useState<string | null>(null);
+  const [transAttacksState, setTransAttacksState] = useState<any[]>([]);
+  const [transSelectedSaves, setTransSelectedSaves] = useState<string[]>([]);
+  const [transSelectedSkills, setTransSelectedSkills] = useState<string[]>([]);
+
+  // Crop Modal
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [isImporting, setIsImporting] = useState(false);
   const importFileInputRef = useRef<HTMLInputElement>(null);
-
-  const [profiles, setProfiles] = useState<any[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const prevIsOpenRef = useRef(false);
 
   useEffect(() => {
     if (isOpen) {
-      setAvatarBase64(activeData?.image || null);
-      if (activeData?.attacks && activeData.attacks.length > 0) {
-        const currentAttacks = [...activeData.attacks];
-        while (currentAttacks.length < 3) {
-          currentAttacks.push({ name: "", bonus: "", dmg: "" });
+      const justOpened = !prevIsOpenRef.current;
+      
+      if (activeData) {
+        if (justOpened) {
+          setFormState(dataToFormState(activeData));
+          setAvatarBase64(activeData.image || null);
+          setAttacksState(dataToAttacks(activeData));
+          setSelectedSaves(dataToSaves(activeData));
+          setSelectedSkills(dataToSkills(activeData));
+
+          if (activeData.transformation) {
+            setHasTransformation(true);
+            setTransFormState(dataToFormState(activeData.transformation));
+            setTransAvatarBase64(activeData.transformation.image || null);
+            setTransAttacksState(dataToAttacks(activeData.transformation));
+            setTransSelectedSaves(dataToSaves(activeData.transformation));
+            setTransSelectedSkills(dataToSkills(activeData.transformation));
+          } else {
+            setHasTransformation(false);
+            setTransFormState(dataToFormState({ name: activeData.name + " (Transformado)" }));
+            setTransAvatarBase64(null);
+            setTransAttacksState(dataToAttacks({}));
+            setTransSelectedSaves([]);
+            setTransSelectedSkills([]);
+          }
         }
-        setAttacksState(currentAttacks);
       } else {
-        setAttacksState([
-          { name: "", bonus: "", dmg: "" },
-          { name: "", bonus: "", dmg: "" },
-          { name: "", bonus: "", dmg: "" }
-        ]);
+        if (justOpened) {
+          setFormState(initialFormState);
+          setAvatarBase64(null);
+          setAttacksState(dataToAttacks({}));
+          setSelectedSaves([]);
+          setSelectedSkills([]);
+
+          setHasTransformation(false);
+          setTransFormState(initialFormState);
+          setTransAvatarBase64(null);
+          setTransAttacksState(dataToAttacks({}));
+          setTransSelectedSaves([]);
+          setTransSelectedSkills([]);
+        }
       }
       
-      const initialSaves = Array.isArray(activeData?.saves) ? activeData.saves : (typeof activeData?.saves === 'string' && activeData.saves ? activeData.saves.split(',').map((s:string) => s.trim()) : []);
-      setSelectedSaves(initialSaves);
-      
-      const initialSkills = Array.isArray(activeData?.skills) ? activeData.skills : (typeof activeData?.skills === 'string' && activeData.skills ? activeData.skills.split(',').map((s:string) => s.trim()) : []);
-      setSelectedSkills(initialSkills);
-
-      setProfBonusState(activeData?.profBonus || "2");
+      if (justOpened) setIsEditingTransformation(activeData?.isTransformed || false);
 
       const fetchProfiles = async () => {
         const supabase = createClient();
@@ -80,9 +181,69 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
           }
         }
       };
-      fetchProfiles();
+      if (justOpened && isGM) fetchProfiles();
+      
+      prevIsOpenRef.current = true;
+    } else {
+      prevIsOpenRef.current = false;
     }
-  }, [isOpen, activeData]);
+  }, [isOpen, activeData, isGM]);
+
+  const activeState = isEditingTransformation ? transFormState : formState;
+  const activeAvatar = isEditingTransformation ? transAvatarBase64 : avatarBase64;
+  const activeAttacks = isEditingTransformation ? transAttacksState : attacksState;
+  const activeSaves = isEditingTransformation ? transSelectedSaves : selectedSaves;
+  const activeSkills = isEditingTransformation ? transSelectedSkills : selectedSkills;
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    const finalValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+    if (isEditingTransformation) {
+      setTransFormState(prev => ({ ...prev, [name]: finalValue }));
+    } else {
+      setFormState(prev => ({ ...prev, [name]: finalValue }));
+    }
+  };
+
+  const handleAttackChange = (index: number, field: string, value: string) => {
+    if (isEditingTransformation) {
+      const newAttacks = [...transAttacksState];
+      newAttacks[index][field] = value;
+      setTransAttacksState(newAttacks);
+    } else {
+      const newAttacks = [...attacksState];
+      newAttacks[index][field] = value;
+      setAttacksState(newAttacks);
+    }
+  };
+
+  const addAttack = () => {
+    if (isEditingTransformation) {
+      setTransAttacksState([...transAttacksState, { name: "", bonus: "", dmg: "" }]);
+    } else {
+      setAttacksState([...attacksState, { name: "", bonus: "", dmg: "" }]);
+    }
+  };
+
+  const handleSavesChange = (save: string, checked: boolean) => {
+    if (isEditingTransformation) {
+      if (checked) setTransSelectedSaves([...transSelectedSaves, save]);
+      else setTransSelectedSaves(transSelectedSaves.filter(s => s !== save));
+    } else {
+      if (checked) setSelectedSaves([...selectedSaves, save]);
+      else setSelectedSaves(selectedSaves.filter(s => s !== save));
+    }
+  };
+
+  const handleSkillsChange = (skill: string, checked: boolean) => {
+    if (isEditingTransformation) {
+      if (checked) setTransSelectedSkills([...transSelectedSkills, skill]);
+      else setTransSelectedSkills(transSelectedSkills.filter(s => s !== skill));
+    } else {
+      if (checked) setSelectedSkills([...selectedSkills, skill]);
+      else setSelectedSkills(selectedSkills.filter(s => s !== skill));
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -94,6 +255,11 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCropComplete = (base64: string) => {
+    if (isEditingTransformation) setTransAvatarBase64(base64);
+    else setAvatarBase64(base64);
   };
 
   const handleImportImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,20 +279,11 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
               const canvas = document.createElement("canvas");
               const ctx = canvas.getContext("2d");
               if (!ctx) return resolve(ev.target?.result as string);
-              
-              const maxW = 1200;
-              const maxH = 1200;
-              let width = img.width;
-              let height = img.height;
-              
-              if (width > height) {
-                if (width > maxW) { height = Math.round(height * maxW / width); width = maxW; }
-              } else {
-                if (height > maxH) { width = Math.round(width * maxH / height); height = maxH; }
-              }
-              
-              canvas.width = width;
-              canvas.height = height;
+              const maxW = 1200, maxH = 1200;
+              let width = img.width, height = img.height;
+              if (width > height) { if (width > maxW) { height = Math.round(height * maxW / width); width = maxW; } } 
+              else { if (height > maxH) { width = Math.round(width * maxH / height); height = maxH; } }
+              canvas.width = width; canvas.height = height;
               ctx.drawImage(img, 0, 0, width, height);
               resolve(canvas.toDataURL("image/jpeg", 0.7));
             };
@@ -144,51 +301,23 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
         body: JSON.stringify({ images: base64Images })
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Erro na importação.");
-      }
-
+      if (!res.ok) throw new Error((await res.json()).error || "Erro na importação.");
       const data = await res.json();
       
-      const form = document.querySelector("#player-form-modal form") as HTMLFormElement;
-      if (form) {
-        const setInputValue = (name: string, value: string | number | undefined) => {
-          if (value !== undefined && value !== null) {
-            const input = form.querySelector(`input[name="${name}"]`) as HTMLInputElement;
-            if (input) input.value = String(value);
-          }
-        };
-
-        setInputValue("name", data.name);
-        setInputValue("playerName", data.playerName);
-        setInputValue("playerClass", data.playerClass);
-        setInputValue("playerLevel", data.playerLevel);
-        setInputValue("race", data.race);
-        setInputValue("str", data.str);
-        setInputValue("dex", data.dex);
-        setInputValue("con", data.con);
-        setInputValue("int", data.int);
-        setInputValue("wis", data.wis);
-        setInputValue("cha", data.cha);
-        setInputValue("hpMax", data.hpMax);
-        setInputValue("ac", data.ac);
-        setInputValue("init", data.init);
-        setInputValue("speed", data.speed);
-        setInputValue("perc", data.perc);
-        setInputValue("hdTotal", data.hdTotal);
-        
-        if (data.profBonus !== undefined && data.profBonus !== null) {
-          setProfBonusState(String(data.profBonus).replace('+', ''));
-        }
+      const newState = dataToFormState(data);
+      if (isEditingTransformation) {
+        setTransFormState(prev => ({...prev, ...newState}));
+        if (data.saves && Array.isArray(data.saves)) setTransSelectedSaves(data.saves);
+        if (data.skills && Array.isArray(data.skills)) setTransSelectedSkills(data.skills);
+        if (data.attacks && Array.isArray(data.attacks)) setTransAttacksState(dataToAttacks(data));
+      } else {
+        setFormState(prev => ({...prev, ...newState}));
         if (data.saves && Array.isArray(data.saves)) setSelectedSaves(data.saves);
         if (data.skills && Array.isArray(data.skills)) setSelectedSkills(data.skills);
-        if (data.attacks && Array.isArray(data.attacks)) {
-           setAttacksState(data.attacks.map((a: any) => ({ name: a.name || "", bonus: a.bonus || "", dmg: a.dmg || "" })));
-        }
+        if (data.attacks && Array.isArray(data.attacks)) setAttacksState(dataToAttacks(data));
       }
-
-      await showAlert({ title: "Importação Concluída", message: "Ficha importada com sucesso! Verifique os dados e clique em Salvar.", type: "success" });
+      
+      await showAlert({ title: "Importação Concluída", message: "Ficha importada com sucesso!", type: "success" });
     } catch (error: any) {
       await showAlert({ title: "Erro na Importação", message: "Falha ao importar: " + error.message, type: "danger" });
     } finally {
@@ -197,29 +326,42 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
     }
   };
 
+  const constructPlayerObject = (state: typeof initialFormState, attacksList: any[], savesList: string[], skillsList: string[], imgBase: string | null, prevData: any) => {
+    const hpMax = parseInt(state.hpMax) || 0;
+    const cleanAttacks = attacksList.filter(a => a.name || a.bonus || a.dmg);
+    return {
+      name: state.name || "",
+      playerClass: state.playerClass || "",
+      classLevel: state.playerClass || "",
+      playerLevel: parseInt(state.playerLevel) || 1,
+      race: state.race || "",
+      str: state.str,
+      dex: state.dex,
+      con: state.con,
+      int: state.int,
+      wis: state.wis,
+      cha: state.cha,
+      hpMax,
+      hpCurrent: prevData?.hpCurrent !== undefined ? prevData.hpCurrent : hpMax,
+      image: imgBase || undefined,
+      ac: state.ac,
+      init: state.init || "",
+      speed: state.speed || "",
+      perc: state.perc,
+      hdTotal: state.hdTotal || "",
+      inspiration: state.inspiration,
+      attacks: cleanAttacks,
+      isDead: prevData?.isDead || false,
+      saves: savesList,
+      skills: skillsList,
+      profBonus: state.profBonus,
+      minSleepReq: parseInt(state.minSleepReq) || 8,
+    };
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
     const id = activeData?.id || Date.now().toString();
-    const hpMax = parseInt(formData.get("hpMax") as string) || 0;
-
-    // Process attacks
-    const formAttacks: any[] = [];
-    const atkNames = formData.getAll("atkName");
-    const atkBonuses = formData.getAll("atkBonus");
-    const atkDmgs = formData.getAll("atkDmg");
-    
-    for (let i = 0; i < atkNames.length; i++) {
-      if (atkNames[i] || atkBonuses[i] || atkDmgs[i]) {
-        formAttacks.push({
-          name: atkNames[i],
-          bonus: atkBonuses[i],
-          dmg: atkDmgs[i]
-        });
-      }
-    }
-    const attacks = formAttacks;
 
     const supabase = createClient();
     
@@ -233,36 +375,17 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
     const selectedProfile = profiles.find(p => p.id === selectedUserId);
     const resolvedPlayerName = selectedProfile ? (selectedProfile.display_name || selectedProfile.email) : "";
 
-    const playerData = {
+    const playerData: any = {
       id,
-      name: (formData.get("name") as string) || "",
       playerName: resolvedPlayerName,
-      playerClass: (formData.get("playerClass") as string) || "",
-      classLevel: (formData.get("playerClass") as string) || "",
-      playerLevel: parseInt(formData.get("playerLevel") as string) || 1,
-      race: (formData.get("race") as string) || "",
-      str: formData.get("str") as string,
-      dex: formData.get("dex") as string,
-      con: formData.get("con") as string,
-      int: formData.get("int") as string,
-      wis: formData.get("wis") as string,
-      cha: formData.get("cha") as string,
-      hpMax,
-      hpCurrent: activeData?.hpCurrent !== undefined ? activeData.hpCurrent : hpMax,
-      image: avatarBase64 || undefined,
-      ac: formData.get("ac") as string,
-      init: (formData.get("init") as string) || "",
-      speed: (formData.get("speed") as string) || "",
-      perc: formData.get("perc") as string,
-      hdTotal: (formData.get("hdTotal") as string) || "",
-      inspiration: formData.get("inspiration") === "on",
-      attacks,
-      isDead: activeData?.isDead || false,
-      saves: selectedSaves,
-      skills: selectedSkills,
-      profBonus: profBonusState,
-      minSleepReq: parseInt(formData.get("minSleepReq") as string) || 8,
+      ...constructPlayerObject(formState, attacksState, selectedSaves, selectedSkills, avatarBase64, activeData),
+      transformation: undefined,
+      isTransformed: hasTransformation ? isEditingTransformation : false
     };
+
+    if (hasTransformation) {
+      playerData.transformation = constructPlayerObject(transFormState, transAttacksState, transSelectedSaves, transSelectedSkills, transAvatarBase64, activeData?.transformation);
+    }
 
     const newPlayers = [...(dadosGlobais.players || [])];
     if (activeData) {
@@ -283,9 +406,20 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
         <header className="modal-header">
           <div className="modal-title-group">
             <span className="modal-subtitle">Banco de Dados</span>
-            <h2 className="modal-title" id="player-form-title">Novo Jogador</h2>
+            <h2 className="modal-title" id="player-form-title">{isEditingTransformation ? "Ficha da Transformação" : "Novo Jogador"}</h2>
           </div>
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <div style={{ display: 'flex', background: 'rgba(0,0,0,0.2)', padding: '4px', borderRadius: '8px', marginRight: '10px' }}>
+              <button type="button" 
+                style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', background: !hasTransformation ? 'rgba(255,255,255,0.1)' : 'transparent', color: !hasTransformation ? '#fff' : 'rgba(255,255,255,0.5)', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }}
+                onClick={() => { setHasTransformation(false); setIsEditingTransformation(false); }}
+              >Ficha Única</button>
+              <button type="button" 
+                style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '0.85rem', background: hasTransformation ? 'var(--accent-primary)' : 'transparent', color: hasTransformation ? '#fff' : 'rgba(255,255,255,0.5)', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }}
+                onClick={() => setHasTransformation(true)}
+              >Forma Dupla (Transformação)</button>
+            </div>
+            
             <input type="file" id="input-player-pdf" accept="image/*,application/pdf" multiple className="hidden" ref={importFileInputRef} onChange={handleImportImages} style={{ display: "none" }} />
             <button type="button" onClick={() => importFileInputRef.current?.click()} className="btn secondary-btn small-btn" disabled={isImporting}>
               {isImporting ? (
@@ -310,12 +444,29 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
             </button>
           </div>
         </header>
-        <form key={isOpen ? (activeData?.id || 'new') : 'closed'} onSubmit={handleSubmit} className="modal-body custom-scrollbar">
+
+        {hasTransformation && (
+          <div className="tabs-nav" style={{ padding: "0 24px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", gap: "15px", marginBottom: "15px" }}>
+            <button 
+              type="button"
+              className={`det-tab-btn ${!isEditingTransformation ? 'active' : ''}`}
+              onClick={() => setIsEditingTransformation(false)}
+            >Forma Original</button>
+            <button 
+              type="button"
+              className={`det-tab-btn ${isEditingTransformation ? 'active' : ''}`}
+              onClick={() => setIsEditingTransformation(true)}
+              style={{ color: "var(--accent-primary)" }}
+            >Forma Transformada</button>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="modal-body custom-scrollbar" style={{ paddingTop: hasTransformation ? "0" : "15px" }}>
           <div className="form-grid-layout">
             <div className="form-col-avatar">
-              <div className="avatar-upload" id="player-avatar-upload-area" onClick={() => fileInputRef.current?.click()} style={{ cursor: "pointer" }}>
-                {avatarBase64 ? (
-                  <img src={avatarBase64} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "12px" }} />
+              <div className="avatar-upload" id="player-avatar-upload-area" onClick={() => fileInputRef.current?.click()} style={{ cursor: "pointer", border: isEditingTransformation ? "2px dashed var(--accent-primary)" : undefined }}>
+                {activeAvatar ? (
+                  <img src={activeAvatar} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "12px" }} />
                 ) : (
                   <div className="avatar-placeholder" id="form-player-avatar-placeholder">
                     <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" strokeWidth="1.5" fill="none">
@@ -333,84 +484,86 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
               <div className="form-row">
                 <div className="form-group flex-2">
                   <label>Nome do Personagem *</label>
-                  <input type="text" name="name" className="journey-input" required defaultValue={activeData?.name || ""} />
+                  <input type="text" name="name" className="journey-input" required value={activeState.name} onChange={handleChange} />
                 </div>
-                <div className="form-group flex-2">
-                  <label>Usuário do Jogador</label>
-                  <select 
-                    className="journey-input" 
-                    value={selectedUserId} 
-                    onChange={(e) => setSelectedUserId(e.target.value)}
-                    disabled={!isGM}
-                  >
-                    <option value="">Nenhum (Controle do Mestre)</option>
-                    {profiles.map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.display_name || p.email}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {!isEditingTransformation && (
+                  <div className="form-group flex-2">
+                    <label>Usuário do Jogador</label>
+                    <select 
+                      className="journey-input" 
+                      value={selectedUserId} 
+                      onChange={(e) => setSelectedUserId(e.target.value)}
+                      disabled={!isGM}
+                    >
+                      <option value="">Nenhum (Controle do Mestre)</option>
+                      {profiles.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.display_name || p.email}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
               <div className="form-row mt-2">
                 <div className="form-group flex-2">
                   <label>Classe</label>
-                  <input type="text" name="playerClass" className="journey-input" defaultValue={activeData?.playerClass || activeData?.classLevel || ""} />
+                  <input type="text" name="playerClass" className="journey-input" value={activeState.playerClass} onChange={handleChange} />
                 </div>
                 <div className="form-group flex-1">
                   <label>Nível</label>
-                  <input type="number" name="playerLevel" className="journey-input" defaultValue={activeData?.playerLevel || 1} min="1" />
+                  <input type="number" name="playerLevel" className="journey-input" value={activeState.playerLevel} min="1" onChange={handleChange} />
                 </div>
                 <div className="form-group flex-2">
                   <label>Raça</label>
-                  <input type="text" name="race" className="journey-input" defaultValue={activeData?.race || ""} />
+                  <input type="text" name="race" className="journey-input" value={activeState.race} onChange={handleChange} />
                 </div>
               </div>
               
               <h4 className="form-section-title mt-4">Atributos Base</h4>
               <div className="form-attr-row">
-                <div className="form-group"><label>FOR</label><input type="number" name="str" className="journey-input" defaultValue={activeData?.str || "10"} min="0" /></div>
-                <div className="form-group"><label>DES</label><input type="number" name="dex" className="journey-input" defaultValue={activeData?.dex || "10"} min="0" /></div>
-                <div className="form-group"><label>CON</label><input type="number" name="con" className="journey-input" defaultValue={activeData?.con || "10"} min="0" /></div>
-                <div className="form-group"><label>INT</label><input type="number" name="int" className="journey-input" defaultValue={activeData?.int || "10"} min="0" /></div>
-                <div className="form-group"><label>SAB</label><input type="number" name="wis" className="journey-input" defaultValue={activeData?.wis || "10"} min="0" /></div>
-                <div className="form-group"><label>CAR</label><input type="number" name="cha" className="journey-input" defaultValue={activeData?.cha || "10"} min="0" /></div>
+                <div className="form-group"><label>FOR</label><input type="number" name="str" className="journey-input" value={activeState.str} min="0" onChange={handleChange} /></div>
+                <div className="form-group"><label>DES</label><input type="number" name="dex" className="journey-input" value={activeState.dex} min="0" onChange={handleChange} /></div>
+                <div className="form-group"><label>CON</label><input type="number" name="con" className="journey-input" value={activeState.con} min="0" onChange={handleChange} /></div>
+                <div className="form-group"><label>INT</label><input type="number" name="int" className="journey-input" value={activeState.int} min="0" onChange={handleChange} /></div>
+                <div className="form-group"><label>SAB</label><input type="number" name="wis" className="journey-input" value={activeState.wis} min="0" onChange={handleChange} /></div>
+                <div className="form-group"><label>CAR</label><input type="number" name="cha" className="journey-input" value={activeState.cha} min="0" onChange={handleChange} /></div>
               </div>
 
               <h4 className="form-section-title mt-4">Estatísticas Vitais</h4>
               <div className="form-row">
-                <div className="form-group flex-1"><label>PV Máx</label><input type="number" name="hpMax" className="journey-input" min="0" defaultValue={activeData?.hpMax || ""} /></div>
-                <div className="form-group flex-1"><label>CA</label><input type="number" name="ac" className="journey-input" min="0" defaultValue={activeData?.ac || ""} /></div>
-                <div className="form-group flex-1"><label>Iniciativa</label><input type="text" name="init" className="journey-input" defaultValue={activeData?.init || ""} /></div>
-                <div className="form-group flex-1"><label>Deslocamento</label><input type="text" name="speed" className="journey-input" defaultValue={activeData?.speed || ""} /></div>
-                <div className="form-group flex-1"><label>Percepção Pas.</label><input type="number" name="perc" className="journey-input" min="0" defaultValue={activeData?.perc || ""} /></div>
-                <div className="form-group flex-1"><label>Descanso Mín.</label><input type="number" name="minSleepReq" className="journey-input" min="0" defaultValue={activeData?.minSleepReq || "8"} title="Tempo mínimo de sono em horas" /></div>
+                <div className="form-group flex-1"><label>PV Máx</label><input type="number" name="hpMax" className="journey-input" min="0" value={activeState.hpMax} onChange={handleChange} /></div>
+                <div className="form-group flex-1"><label>CA</label><input type="number" name="ac" className="journey-input" min="0" value={activeState.ac} onChange={handleChange} /></div>
+                <div className="form-group flex-1"><label>Iniciativa</label><input type="text" name="init" className="journey-input" value={activeState.init} onChange={handleChange} /></div>
+                <div className="form-group flex-1"><label>Deslocamento</label><input type="text" name="speed" className="journey-input" value={activeState.speed} onChange={handleChange} /></div>
+                <div className="form-group flex-1"><label>Percepção Pas.</label><input type="number" name="perc" className="journey-input" min="0" value={activeState.perc} onChange={handleChange} /></div>
+                <div className="form-group flex-1"><label>Descanso Mín.</label><input type="number" name="minSleepReq" className="journey-input" min="0" value={activeState.minSleepReq} onChange={handleChange} title="Tempo mínimo de sono em horas" /></div>
               </div>
 
               <h4 className="form-section-title mt-4">Combate & Ataques (D&D 5e)</h4>
               <div className="form-row">
                 <div className="form-group flex-1">
                   <label>Dado de Vida Total (ex: 3d10 ou 1d8)</label>
-                  <input type="text" name="hdTotal" className="journey-input" placeholder="ex: 1d10" defaultValue={activeData?.hdTotal || ""} />
+                  <input type="text" name="hdTotal" className="journey-input" placeholder="ex: 1d10" value={activeState.hdTotal} onChange={handleChange} />
                 </div>
                 <div className="form-group flex-1" style={{ display: "flex", alignItems: "center", marginTop: "24px" }}>
                   <label className="custom-checkbox-container">
-                    <input type="checkbox" name="inspiration" defaultChecked={activeData?.inspiration || false} /> Conceder Inspiração?
+                    <input type="checkbox" name="inspiration" checked={activeState.inspiration} onChange={handleChange} /> Conceder Inspiração?
                   </label>
                 </div>
               </div>
 
               <label style={{ marginTop: "14px", marginBottom: "6px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8rem", fontWeight: 700, color: "var(--text-secondary)" }}>
                 <span>Ataques Rápidos (ex: Espada, Arco, Magias)</span>
-                <button type="button" onClick={() => setAttacksState([...attacksState, { name: "", bonus: "", dmg: "" }])} className="btn success-btn small-btn" style={{ padding: "2px 8px", fontSize: "0.7rem", height: "auto" }}>
+                <button type="button" onClick={addAttack} className="btn success-btn small-btn" style={{ padding: "2px 8px", fontSize: "0.7rem", height: "auto" }}>
                   + Adicionar Ataque
                 </button>
               </label>
-              {attacksState.map((atk, index) => (
+              {activeAttacks.map((atk, index) => (
                 <div className="form-row" style={{ gap: "8px", marginBottom: "8px" }} key={index}>
-                  <div className="form-group flex-3"><input type="text" name="atkName" className="journey-input" placeholder="Nome da Arma/Ataque" defaultValue={atk.name} /></div>
-                  <div className="form-group flex-1"><input type="text" name="atkBonus" className="journey-input" placeholder="Bônus" defaultValue={atk.bonus} /></div>
-                  <div className="form-group flex-2"><input type="text" name="atkDmg" className="journey-input" placeholder="Dano/Tipo" defaultValue={atk.dmg} /></div>
+                  <div className="form-group flex-3"><input type="text" className="journey-input" placeholder="Nome da Arma/Ataque" value={atk.name} onChange={(e) => handleAttackChange(index, "name", e.target.value)} /></div>
+                  <div className="form-group flex-1"><input type="text" className="journey-input" placeholder="Bônus" value={atk.bonus} onChange={(e) => handleAttackChange(index, "bonus", e.target.value)} /></div>
+                  <div className="form-group flex-2"><input type="text" className="journey-input" placeholder="Dano/Tipo" value={atk.dmg} onChange={(e) => handleAttackChange(index, "dmg", e.target.value)} /></div>
                 </div>
               ))}
 
@@ -418,23 +571,18 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
               <div className="form-row">
                 <div className="form-group flex-1">
                   <label>Bônus de Proficiência</label>
-                  <input type="number" name="profBonus" className="journey-input" value={profBonusState} onChange={(e) => setProfBonusState(e.target.value)} min="0" />
+                  <input type="number" name="profBonus" className="journey-input" value={activeState.profBonus} onChange={handleChange} min="0" />
                 </div>
               </div>
               <div className="form-row mt-2">
                 <div className="form-group flex-1">
                   <label>Salvaguardas com Proficiência</label>
                   <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", background: "rgba(0,0,0,0.2)", padding: "10px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
-                    {SAVES_LIST.map(save => {
-                      return (
-                        <label key={save} className="custom-checkbox-container" style={{ fontSize: "0.85rem", fontWeight: "bold", display: "flex", alignItems: "center" }}>
-                          <input type="checkbox" name="saves" value={save} checked={selectedSaves.includes(save)} onChange={(e) => {
-                            if (e.target.checked) setSelectedSaves(prev => [...prev, save]);
-                            else setSelectedSaves(prev => prev.filter(s => s !== save));
-                          }} /> {save}
-                        </label>
-                      );
-                    })}
+                    {SAVES_LIST.map(save => (
+                      <label key={save} className="custom-checkbox-container" style={{ fontSize: "0.85rem", fontWeight: "bold", display: "flex", alignItems: "center" }}>
+                        <input type="checkbox" checked={activeSaves.includes(save)} onChange={(e) => handleSavesChange(save, e.target.checked)} /> {save}
+                      </label>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -442,16 +590,11 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
                 <div className="form-group flex-1">
                   <label>Perícias com Proficiência</label>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "10px", background: "rgba(0,0,0,0.2)", padding: "15px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
-                    {SKILLS_LIST.map(skill => {
-                      return (
-                        <label key={skill} className="custom-checkbox-container" style={{ fontSize: "0.85rem", display: "flex", alignItems: "center" }}>
-                          <input type="checkbox" name="skills" value={skill} checked={selectedSkills.includes(skill)} onChange={(e) => {
-                            if (e.target.checked) setSelectedSkills(prev => [...prev, skill]);
-                            else setSelectedSkills(prev => prev.filter(s => s !== skill));
-                          }} /> {skill}
-                        </label>
-                      );
-                    })}
+                    {SKILLS_LIST.map(skill => (
+                      <label key={skill} className="custom-checkbox-container" style={{ fontSize: "0.85rem", display: "flex", alignItems: "center" }}>
+                        <input type="checkbox" checked={activeSkills.includes(skill)} onChange={(e) => handleSkillsChange(skill, e.target.checked)} /> {skill}
+                      </label>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -477,7 +620,7 @@ export default function PlayerFormModal({ isOpen, onClose }: PlayerFormModalProp
         isOpen={isCropModalOpen} 
         onClose={() => setIsCropModalOpen(false)} 
         imageUrl={cropImageSrc} 
-        onCrop={(base64) => setAvatarBase64(base64)} 
+        onCrop={handleCropComplete} 
       />
     </Modal>
   );

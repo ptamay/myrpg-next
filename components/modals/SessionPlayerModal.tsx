@@ -52,9 +52,13 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
     }
   }, [isOpen, activeData, diaAtual, jornadaPorDia]);
 
-  if (!activeData || !isOpen) return null;
+  if (!activeData) return null;
 
-  const player = activeData.player || activeData;
+  const rawPlayer = activeData.player || activeData;
+  const player = rawPlayer?.isTransformed && rawPlayer?.transformation 
+    ? { ...rawPlayer, ...rawPlayer.transformation } 
+    : rawPlayer;
+
   const isDead = player.isDead;
 
   // Calculate Total Sleep in the day (combining saved blocks and the current edited block)
@@ -127,17 +131,34 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
 
   const handleHpChange = (amount: number) => {
     const newPlayers = [...(dadosGlobais.players || [])];
-    const idx = newPlayers.findIndex(p => p.id === player.id);
+    const idx = newPlayers.findIndex(p => p.id === rawPlayer.id);
     if (idx !== -1) {
-      const max = Number(newPlayers[idx].hpMax) || 0;
-      let current = Number(newPlayers[idx].hpCurrent);
-      if (isNaN(current)) current = max;
-      current += amount;
-      if (current > max) current = max;
-      if (current < 0) current = 0;
-      newPlayers[idx].hpCurrent = current;
-      if (current === 0) newPlayers[idx].isDead = true;
-      else newPlayers[idx].isDead = false;
+      const transformation = newPlayers[idx].transformation;
+      if (rawPlayer.isTransformed && transformation) {
+        const max = Number(transformation.hpMax) || 0;
+        let current = Number(transformation.hpCurrent);
+        if (isNaN(current)) current = max;
+        current += amount;
+        if (current > max) current = max;
+        if (current < 0) current = 0;
+        transformation.hpCurrent = current;
+        if (current === 0) {
+           newPlayers[idx].isTransformed = false;
+           transformation.isDead = true;
+        } else {
+           transformation.isDead = false;
+        }
+      } else {
+        const max = Number(newPlayers[idx].hpMax) || 0;
+        let current = Number(newPlayers[idx].hpCurrent);
+        if (isNaN(current)) current = max;
+        current += amount;
+        if (current > max) current = max;
+        if (current < 0) current = 0;
+        newPlayers[idx].hpCurrent = current;
+        if (current === 0) newPlayers[idx].isDead = true;
+        else newPlayers[idx].isDead = false;
+      }
       setDadosGlobais({ ...dadosGlobais, players: newPlayers });
       setTimeout(salvarEstadoLocal, 100);
     }
@@ -150,7 +171,7 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
     }
 
     const newPlayers = [...(dadosGlobais.players || [])];
-    const idx = newPlayers.findIndex(p => p.id === player.id);
+    const idx = newPlayers.findIndex(p => p.id === rawPlayer.id);
     if (idx !== -1) {
       newPlayers[idx].sleepHoursToday = Number(totalSleepHours);
       if (setPlayerToSleep) {
@@ -213,7 +234,7 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
   const handleResetBloco = () => {
     setAcoes([]);
     const newPlayers = [...(dadosGlobais.players || [])];
-    const idx = newPlayers.findIndex(p => p.id === player.id);
+    const idx = newPlayers.findIndex(p => p.id === rawPlayer.id);
     if (idx !== -1 && newPlayers[idx].isSleepingAction) {
       newPlayers[idx].isSleepingAction = false;
       setDadosGlobais({ ...dadosGlobais, players: newPlayers });
@@ -255,7 +276,7 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
 
   const handleExhaustionChange = (level: number) => {
     const newPlayers = [...(dadosGlobais.players || [])];
-    const idx = newPlayers.findIndex(p => p.id === player.id);
+    const idx = newPlayers.findIndex(p => p.id === rawPlayer.id);
     if (idx !== -1) {
       newPlayers[idx].exhaustionLevel = level;
       setDadosGlobais({ ...dadosGlobais, players: newPlayers });
@@ -295,7 +316,7 @@ export default function SessionPlayerModal({ isOpen, onClose }: SessionPlayerMod
                 {player.image ? (
                   <img src={player.image} className="npc-card-avatar" alt={player.name} />
                 ) : (
-                  <div className="npc-card-placeholder">{player.name.charAt(0).toUpperCase()}</div>
+                  <div className="npc-card-placeholder">{(player.name || "?").charAt(0).toUpperCase()}</div>
                 )}
                 <div className="npc-card-title-area">
                   <div style={{ display: "flex", alignItems: "center" }}>

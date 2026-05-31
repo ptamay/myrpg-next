@@ -94,10 +94,9 @@ export default function PlayerManageModal({ isOpen, onClose, player }: PlayerMan
     onClose();
   };
 
-  if (!player) return null;
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} id="player-manage-modal">
+      {player && (
       <div className="modal-content modal-md glass-panel">
         <header className="modal-header">
           <div className="modal-title-group">
@@ -171,6 +170,7 @@ export default function PlayerManageModal({ isOpen, onClose, player }: PlayerMan
           <button className="btn primary-btn" onClick={handleSave}>Salvar Alterações</button>
         </footer>
       </div>
+      )}
     </Modal>
   );
 }

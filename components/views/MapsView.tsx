@@ -8,7 +8,7 @@ import { useUserSession } from "@/contexts/UserSessionContext";
 import { createClient } from "@/lib/supabase/client";
 
 export default function MapsView() {
-  const { dadosGlobais, setDadosGlobais, salvarEstadoLocal } = useAppContext();
+  const { dadosGlobais, setDadosGlobais } = useAppContext();
   const { showConfirm } = useSystemDialog();
   const { isGM } = useUserSession();
   const [mapsLoaded, setMapsLoaded] = useState<{id: string, name: string, data: string}[]>([]);
@@ -45,17 +45,47 @@ export default function MapsView() {
     let mapsAdded = 0;
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      
+      // Compressão via canvas (max 5MB e redimensionamento se necessário)
       const reader = new FileReader();
       reader.onload = async (ev) => {
-        const id = "map_" + Date.now() + "_" + i;
-        await saveMapToDB(id, file.name, ev.target?.result as string);
-        mapsAdded++;
-        if (mapsAdded === files.length) {
-          loadMaps();
-          // Atualiza globais para manter sincronia
-          setDadosGlobais({ ...dadosGlobais, mapsTrigger: Date.now() }); // Just a trigger
-          setTimeout(salvarEstadoLocal, 100);
-        }
+        const img = new window.Image();
+        img.onload = async () => {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return;
+          
+          let width = img.width;
+          let height = img.height;
+          const MAX_SIZE = 2500; // Limite razoável para mapas de RPG
+          
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height = Math.round(height * MAX_SIZE / width);
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width = Math.round(width * MAX_SIZE / height);
+              height = MAX_SIZE;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.7);
+          
+          const id = "map_" + Date.now() + "_" + i;
+          await saveMapToDB(id, file.name, compressedDataUrl);
+          mapsAdded++;
+          
+          if (mapsAdded === files.length) {
+            loadMaps();
+          }
+        };
+        img.src = ev.target?.result as string;
       };
       reader.readAsDataURL(file);
     }
@@ -69,8 +99,6 @@ export default function MapsView() {
       await deleteMapFromDB(currentMap.id);
       setCurrentMapIndex(0);
       loadMaps();
-      setDadosGlobais({ ...dadosGlobais, mapsTrigger: Date.now() });
-      setTimeout(salvarEstadoLocal, 100);
     }
   };
 
@@ -107,10 +135,11 @@ export default function MapsView() {
               style={{
                 width: "40px", height: "40px", borderRadius: "6px", cursor: "pointer", 
                 border: idx === currentMapIndex ? "2px solid var(--accent-primary)" : "2px solid transparent",
-                backgroundImage: `url(${map.data})`, backgroundSize: "cover", backgroundPosition: "center",
-                opacity: idx === currentMapIndex ? 1 : 0.6, transition: "all 0.2s"
+                opacity: idx === currentMapIndex ? 1 : 0.6, transition: "all 0.2s", overflow: "hidden"
               }}
-            ></div>
+            >
+              <img src={map.data} alt={map.name} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </div>
           ))}
         </div>
 
@@ -134,7 +163,7 @@ export default function MapsView() {
                 <p>Nenhum mapa adicionado. Faça upload para começar.</p>
               </div>
             ) : (
-              <img src={mapsLoaded[currentMapIndex]?.data} alt="Mapa" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: "8px" }} />
+              <img src={mapsLoaded[currentMapIndex]?.data} alt="Mapa" loading="lazy" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: "8px" }} />
             )}
           </div>
 

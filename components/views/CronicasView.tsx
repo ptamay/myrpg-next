@@ -25,11 +25,14 @@ export default function CronicasView() {
 
   return (
     <div className="npc-view-container" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div className="npc-header glass-panel">
+      <div className="npc-header glass-panel" style={{ alignItems: "center" }}>
         <div>
           <h2 className="view-title">Crônicas</h2>
           <p className="view-subtitle">Registros e investigações da campanha.</p>
         </div>
+
+        <div id="mural-header-portal" style={{ flex: 1, display: "flex", justifyContent: "center" }}></div>
+
         <div className="filter-tags">
           {tabs.map(tab => (
             <button

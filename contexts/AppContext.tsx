@@ -18,6 +18,7 @@ interface AppContextData {
   jornadaPorDia: Record<number, any>;
   setJornadaPorDia: (val: Record<number, any> | ((prev: Record<number, any>) => Record<number, any>)) => void;
   salvarEstadoLocal: () => void;
+  syncLoading: boolean;
   modals: {
     npcForm: boolean;
     npcDetail: boolean;
@@ -40,7 +41,7 @@ interface AppContextData {
     personalNoteDetail: boolean;
   };
   setModals: React.Dispatch<React.SetStateAction<any>>;
-  activeData: any; // Data for detail modals
+  activeData: any;
   setActiveData: React.Dispatch<React.SetStateAction<any>>;
 }
 
@@ -54,8 +55,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     jornadaPorDia, setJornadaPorDia,
     loading: syncLoading
   } = useGameSync();
-
-  const [mounted, setMounted] = useState(false);
+  
   
   const [modals, setModals] = useState({
     npcForm: false,
@@ -80,9 +80,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
   const [activeData, setActiveData] = useState<any>(null);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+
 
   useEffect(() => {
     if (!syncLoading) {
@@ -99,18 +97,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Agora o salvamento ocorre automaticamente nos wrappers de setX do useGameSync
   };
 
-  if (!mounted) return null; // Prevent hydration errors
-  
-  if (syncLoading) {
-    return (
-      <div style={{display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', gap: '1rem'}}>
-        <div className="spinner" style={{width: '40px', height: '40px', border: '3px solid var(--border-subtle)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite'}}></div>
-        <p style={{color: 'var(--text-secondary)'}}>Sincronizando campanha...</p>
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
-
+  // IMPORTANT: Do NOT block rendering here with !mounted or syncLoading checks.
+  // These blocking patterns cause infinite loading screens. Data loads in the
+  // background and components handle their own empty/loading states.
   return (
     <AppContext.Provider
       value={{
@@ -123,6 +112,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         jornadaPorDia,
         setJornadaPorDia,
         salvarEstadoLocal,
+        syncLoading,
         modals,
         setModals,
         activeData,

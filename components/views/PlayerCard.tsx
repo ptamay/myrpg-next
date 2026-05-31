@@ -12,11 +12,14 @@ interface PlayerCardProps {
 }
 
 export default function PlayerCard({ player }: PlayerCardProps) {
-  const { dadosGlobais, setDadosGlobais, setModals, setActiveData, salvarEstadoLocal } = useAppContext();
+  const { dadosGlobais, setDadosGlobais, setModals, setActiveData, salvarEstadoLocal, jornadaPorDia, diaAtual } = useAppContext();
   const { showConfirm } = useSystemDialog();
   const { isGM, session } = useUserSession();
   const [skillsExpanded, setSkillsExpanded] = useState(false);
   const [attacksExpanded, setAttacksExpanded] = useState(false);
+
+  const isOwner = player.id === session?.playerId;
+  const canViewDetails = isGM || isOwner;
 
   const calcMod = (val: number | string) => {
     const m = Math.floor((parseInt((val || 10).toString()) - 10) / 2);
@@ -43,7 +46,48 @@ export default function PlayerCard({ player }: PlayerCardProps) {
     }
   };
 
-  const hpPct = player.hpMax > 0 ? Math.max(0, Math.min(100, ((player.hpCurrent !== undefined ? player.hpCurrent : player.hpMax) / player.hpMax) * 100)) : 0;
+  const handleUpdate = (updates: any) => {
+    const newPlayers = dadosGlobais.players.map((p: any) => p.id === player.id ? { ...p, ...updates } : p);
+    setDadosGlobais({ ...dadosGlobais, players: newPlayers });
+    setTimeout(salvarEstadoLocal, 100);
+  };
+
+  const handleActiveUpdate = (updates: any) => {
+    if (player.isTransformed) {
+      handleUpdate({ transformation: { ...player.transformation, ...updates } });
+    } else {
+      handleUpdate(updates);
+    }
+  };
+
+  const toggleTransform = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isGM && !isOwner) return;
+    if (!player.isTransformed) {
+      handleUpdate({ 
+        isTransformed: true,
+        transformation: {
+          ...player.transformation,
+          hpCurrent: player.transformation?.hpMax || 0,
+          tempHp: 0,
+          isDead: false
+        }
+      });
+    } else {
+      handleUpdate({ isTransformed: false });
+    }
+  };
+
+  const handleAcMod = (e: React.MouseEvent, mod: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const currentTempAc = activePlayer.tempAc || 0;
+    handleActiveUpdate({ tempAc: currentTempAc + mod });
+  };
+
+  const activePlayer = player.isTransformed && player.transformation ? player.transformation : player;
+
+  const hpPct = activePlayer.hpMax > 0 ? Math.max(0, Math.min(100, ((activePlayer.hpCurrent !== undefined ? activePlayer.hpCurrent : activePlayer.hpMax) / activePlayer.hpMax) * 100)) : 0;
   
   let hpColor = "#4ade80"; // Saudável (soft green)
   let hpStatusText = "Saudável";
@@ -56,36 +100,77 @@ export default function PlayerCard({ player }: PlayerCardProps) {
     hpStatusText = "Ok";
   }
 
-  const profBonus = player.profBonus || "2";
+  const profBonus = activePlayer.profBonus || "2";
 
-  const parsedSaves = Array.isArray(player.saves) ? player.saves : (typeof player.saves === 'string' && player.saves ? player.saves.split(',').map((s: string) => s.trim()) : []);
-  const parsedSkills = Array.isArray(player.skills) ? player.skills : (typeof player.skills === 'string' && player.skills ? player.skills.split(',').map((s: string) => s.trim()) : []);
+  const parsedSaves = Array.isArray(activePlayer.saves) ? activePlayer.saves : (typeof activePlayer.saves === 'string' && activePlayer.saves ? activePlayer.saves.split(',').map((s: string) => s.trim()) : []);
+  const parsedSkills = Array.isArray(activePlayer.skills) ? activePlayer.skills : (typeof activePlayer.skills === 'string' && activePlayer.skills ? activePlayer.skills.split(',').map((s: string) => s.trim()) : []);
+
+  let totalSleepMinutes = 0;
+  const dayData = jornadaPorDia[diaAtual];
+  if (dayData && dayData.blocos) {
+    dayData.blocos.forEach((b: any) => {
+      if (b.playerSessions && b.playerSessions[player.id]) {
+        (b.playerSessions[player.id].acoes || []).forEach((a: any) => {
+          if (a && typeof a === 'object') {
+            if (a.type === 'Dormindo / Descanso' || a.isSleep === true) {
+              totalSleepMinutes += (a.timeCost || 0);
+            }
+          }
+        });
+      }
+    });
+  }
+  const totalSleepHours = (totalSleepMinutes / 60).toFixed(1).replace('.0', '');
 
   return (
-    <div className={`npc-card glass-panel combat-expanded ${player.isDead ? "is-dead" : ""}`} onClick={openDetailView} style={{ cursor: "pointer" }}>
-      {player.isDead && <div className="status-dead-overlay">💀</div>}
+    <div className={`npc-card glass-panel combat-expanded ${activePlayer.isDead ? "is-dead" : ""}`} onClick={canViewDetails ? openDetailView : undefined} style={{ cursor: canViewDetails ? "pointer" : "default" }}>
+      {activePlayer.isDead && <div className="status-dead-overlay">💀</div>}
       
       <div className="npc-card-header">
-        {player.image ? (
-          <img src={player.image} className="npc-card-avatar" alt={player.name} />
+        {activePlayer.image ? (
+          <img src={activePlayer.image} className="npc-card-avatar" alt={activePlayer.name} style={{ border: player.isTransformed ? "2px solid var(--accent-primary)" : "none" }} />
         ) : (
-          <div className="npc-card-placeholder">{player.name.charAt(0).toUpperCase()}</div>
+          <div className="npc-card-placeholder" style={{ border: player.isTransformed ? "2px solid var(--accent-primary)" : "none" }}>{(activePlayer.name || "?").charAt(0).toUpperCase()}</div>
         )}
         <div className="npc-card-title-area" style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <span className="npc-card-name" style={{ margin: 0, fontSize: player.name?.length > 15 ? "1.05rem" : "1.25rem", fontWeight: 800 }}>
-              {player.name}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+            <span className="npc-card-name" style={{ margin: 0, fontSize: activePlayer.name?.length > 15 ? "1.05rem" : "1.25rem", fontWeight: 800, color: player.isTransformed ? "var(--accent-primary)" : "inherit" }}>
+              {activePlayer.name}
             </span>
-            {player.inspiration && <span className="inspiration-badge" title="Inspiração">🌟</span>}
+            {activePlayer.inspiration && <span className="inspiration-badge" title="Inspiração">🌟</span>}
+            {player.isTransformed && <span style={{fontSize: "0.6rem", backgroundColor: "var(--accent-primary)", padding: "2px 6px", borderRadius: "8px", color: "#fff", fontWeight: "bold"}}>TRANSF.</span>}
+            {player.transformation && (isGM || isOwner) && (
+              <button 
+                title={player.isTransformed ? 'Reverter Forma' : 'Transformar'} 
+                onClick={toggleTransform}
+                style={{
+                  background: player.isTransformed ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: player.isTransformed ? '#fff' : 'var(--text-muted)',
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  transition: 'all 0.2s',
+                  marginLeft: 'auto'
+                }}
+              >
+                ⚡
+              </button>
+            )}
           </div>
           <div className="npc-card-title">
-            {player.playerClass || player.classLevel || 'Sem classe'} {player.playerLevel ? `Nv. ${player.playerLevel}` : ''}
+            {activePlayer.playerClass || activePlayer.classLevel || 'Sem classe'} {activePlayer.playerLevel ? `Nv. ${activePlayer.playerLevel}` : ''}
             <span style={{ margin: "0 6px", opacity: 0.5 }}>•</span>
             <span style={{ color: hpColor, fontWeight: 700 }}>{hpStatusText}</span>
           </div>
           <div className="npc-card-meta">
-            <span>{player.race || '---'}</span>
-            {player.playerName && (
+            <span>{activePlayer.race || '---'}</span>
+            {player.playerName && !player.isTransformed && (
               <>
                 <span>•</span>
                 <span>Jogador: {player.playerName}</span>
@@ -94,7 +179,7 @@ export default function PlayerCard({ player }: PlayerCardProps) {
           </div>
         </div>
         <div className="npc-card-actions">
-          {(isGM || player.id === session?.playerId) && (
+          {canViewDetails && (
             <button className="npc-card-action" onClick={(e) => { e.stopPropagation(); openDetail(); }} title="Editar">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 20h9"></path>
@@ -113,27 +198,32 @@ export default function PlayerCard({ player }: PlayerCardProps) {
         </div>
       </div>
       
-      <div className="npc-card-combat-details">
-        <div className="npc-card-attrs">
-          <div className="attr-m"><span className="attr-lbl">FOR</span><span className="attr-mod">{calcMod(player.str)}</span><span className="attr-val">{player.str || 10}</span></div>
-          <div className="attr-m"><span className="attr-lbl">DES</span><span className="attr-mod">{calcMod(player.dex)}</span><span className="attr-val">{player.dex || 10}</span></div>
-          <div className="attr-m"><span className="attr-lbl">CON</span><span className="attr-mod">{calcMod(player.con)}</span><span className="attr-val">{player.con || 10}</span></div>
-          <div className="attr-m"><span className="attr-lbl">INT</span><span className="attr-mod">{calcMod(player.int)}</span><span className="attr-val">{player.int || 10}</span></div>
-          <div className="attr-m"><span className="attr-lbl">SAB</span><span className="attr-mod">{calcMod(player.wis)}</span><span className="attr-val">{player.wis || 10}</span></div>
-          <div className="attr-m"><span className="attr-lbl">CAR</span><span className="attr-mod">{calcMod(player.cha)}</span><span className="attr-val">{player.cha || 10}</span></div>
+      {canViewDetails && (
+        <div className="npc-card-combat-details">
+          <div className="npc-card-attrs">
+          <div className="attr-m"><span className="attr-lbl">FOR</span><span className="attr-mod">{calcMod(activePlayer.str)}</span><span className="attr-val">{activePlayer.str || 10}</span></div>
+          <div className="attr-m"><span className="attr-lbl">DES</span><span className="attr-mod">{calcMod(activePlayer.dex)}</span><span className="attr-val">{activePlayer.dex || 10}</span></div>
+          <div className="attr-m"><span className="attr-lbl">CON</span><span className="attr-mod">{calcMod(activePlayer.con)}</span><span className="attr-val">{activePlayer.con || 10}</span></div>
+          <div className="attr-m"><span className="attr-lbl">INT</span><span className="attr-mod">{calcMod(activePlayer.int)}</span><span className="attr-val">{activePlayer.int || 10}</span></div>
+          <div className="attr-m"><span className="attr-lbl">SAB</span><span className="attr-mod">{calcMod(activePlayer.wis)}</span><span className="attr-val">{activePlayer.wis || 10}</span></div>
+          <div className="attr-m"><span className="attr-lbl">CAR</span><span className="attr-mod">{calcMod(activePlayer.cha)}</span><span className="attr-val">{activePlayer.cha || 10}</span></div>
         </div>
         
         <div className="npc-card-stats">
-          <div className="stat-mini" title="Classe de Armadura" style={{ cursor: "default" }}>
+          <div className="stat-mini" title="Classe de Armadura (Esquerdo: +1 | Direito: -1)" onClick={(e) => handleAcMod(e, 1)} onContextMenu={(e) => handleAcMod(e, -1)} style={{ cursor: "pointer", userSelect: "none" }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-            <span className="base-val">{player.ac || '--'}</span>
+            <span className="base-val">{activePlayer.ac || '--'}</span>
+            {activePlayer.tempAc ? <span className="temp-bonus">{activePlayer.tempAc > 0 ? '+' : ''}{activePlayer.tempAc}</span> : null}
           </div>
           <div className="stat-mini" title="Iniciativa">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><circle cx="15.5" cy="15.5" r="1.5"></circle><circle cx="15.5" cy="8.5" r="1.5"></circle><circle cx="8.5" cy="15.5" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle></svg>
-            {player.init || '--'}
+            {activePlayer.init || '--'}
           </div>
-          <div className="stat-mini" title="Deslocamento">💨 {player.speed || '--'}</div>
-          <div className="stat-mini" title="Percepção Passiva">👁️ {player.perc || '--'}</div>
+          <div className="stat-mini" title="Deslocamento">💨 {activePlayer.speed || '--'}</div>
+          <div className="stat-mini" title="Percepção Passiva">👁️ {activePlayer.perc || '--'}</div>
+          <div className="stat-mini" title="Sono Hoje" style={{ color: "var(--text-primary)" }}>
+            💤 {totalSleepHours}h <span style={{ fontSize: "0.65rem", color: "var(--text-muted)" }}>/ {activePlayer.minSleepReq || 8}h</span>
+          </div>
         </div>
 
         <div style={{ display: "flex", gap: "12px", marginTop: "1rem", alignItems: "center", width: "100%", padding: "0 1.5rem 1rem" }}>
@@ -141,8 +231,8 @@ export default function PlayerCard({ player }: PlayerCardProps) {
             <div className="hp-header" style={{ marginBottom: "4px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span>PONTOS DE VIDA</span>
               <div className="hp-values-group">
-                <span className="hp-total-display">{player.hpCurrent || 0}</span>
-                <span className="hp-max-val">/ {player.hpMax || 0}</span>
+                <span className="hp-total-display">{activePlayer.hpCurrent !== undefined ? activePlayer.hpCurrent : (activePlayer.hpMax || 0)}</span>
+                <span className="hp-max-val">/ {activePlayer.hpMax || 0}</span>
               </div>
             </div>
             <div className="hp-bar-bg" style={{ height: "6px" }}>
@@ -152,11 +242,11 @@ export default function PlayerCard({ player }: PlayerCardProps) {
           
           <div className="player-card-hd-badge" style={{ flex: "0 0 85px", background: "rgba(255, 255, 255, 0.03)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "6px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "4px 6px", height: "38px", boxSizing: "border-box" }}>
             <span style={{ fontSize: "0.55rem", fontWeight: 800, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.03em", lineHeight: 1, display: "block" }}>Dado Vida</span>
-            <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--text-primary)", marginTop: "2px", lineHeight: 1, display: "block" }}>{player.hdTotal || '1d10'}</span>
+            <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--text-primary)", marginTop: "2px", lineHeight: 1, display: "block" }}>{activePlayer.hdTotal || '1d10'}</span>
           </div>
         </div>
 
-        {player.attacks && player.attacks.length > 0 && (
+        {activePlayer.attacks && activePlayer.attacks.length > 0 && (
           <>
             <div className={`player-skills-trigger ${attacksExpanded ? "active" : ""}`} onClick={(e) => { e.stopPropagation(); setAttacksExpanded(!attacksExpanded); }}>
               <span>Ataques e Conjurações</span>
@@ -165,7 +255,7 @@ export default function PlayerCard({ player }: PlayerCardProps) {
             
             <div className={`player-skills-collapse ${attacksExpanded ? "active" : ""}`} onClick={(e) => e.stopPropagation()} style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "8px", padding: attacksExpanded ? "12px" : "0 12px" }}>
               <div className="player-attacks-list" style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                {player.attacks.map((a: any, i: number) => (
+                {activePlayer.attacks.map((a: any, i: number) => (
                   <div key={i} className="player-atk-row" style={{ display: "flex", alignItems: "center", fontSize: "0.8rem", padding: "6px 10px", background: "rgba(255,255,255,0.03)", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.02)" }}>
                     <span className="atk-name" style={{ width: "45%", fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {a.name ? a.name.charAt(0).toUpperCase() + a.name.slice(1) : ''}
@@ -198,7 +288,7 @@ export default function PlayerCard({ player }: PlayerCardProps) {
             <span className="skills-section-title" style={{ fontSize: "0.7rem", fontWeight: 800, textTransform: "uppercase", color: "#8a8a8a", letterSpacing: "0.05em", marginBottom: "8px", display: "block" }}>Salvaguardas</span>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: "16px", rowGap: "8px" }}>
               {SAVES_MAP.map((sv) => {
-                const baseVal = parseInt((player[sv.attr] || 10).toString());
+                const baseVal = parseInt((activePlayer[sv.attr] || 10).toString());
                 const mod = Math.floor((baseVal - 10) / 2);
                 const isProf = parsedSaves.some((s: string) => s.toLowerCase().trim() === sv.key.toLowerCase().trim());
                 const total = mod + (isProf ? parseInt(profBonus) : 0);
@@ -225,7 +315,7 @@ export default function PlayerCard({ player }: PlayerCardProps) {
             <span className="skills-section-title" style={{ fontSize: "0.7rem", fontWeight: 800, textTransform: "uppercase", color: "#8a8a8a", letterSpacing: "0.05em", marginBottom: "8px", display: "block" }}>Perícias</span>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: "16px", rowGap: "8px" }}>
               {SKILLS_MAP.map((sk) => {
-                const baseVal = parseInt((player[sk.attr] || 10).toString());
+                const baseVal = parseInt((activePlayer[sk.attr] || 10).toString());
                 const mod = Math.floor((baseVal - 10) / 2);
                 const isProf = parsedSkills.some((s: string) => s.toLowerCase().trim() === sk.label.toLowerCase().trim() || s.toLowerCase().trim() === sk.name.toLowerCase().trim());
                 const total = mod + (isProf ? parseInt(profBonus) : 0);
@@ -263,6 +353,7 @@ export default function PlayerCard({ player }: PlayerCardProps) {
           </div>
         </div>
       </div>
-    </div>
+    )}
+  </div>
   );
 }

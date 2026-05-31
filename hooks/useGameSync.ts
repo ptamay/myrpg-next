@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { GlobalData } from "@/lib/gameData";
 import { mapDBToNpc, mapDBToPlayer, mapNpcToDB, mapPlayerToDB } from "@/lib/supabase/mappers";
+import { useAuth } from "@/contexts/AuthContext";
 
 import { useRealtimeSync } from "./useRealtime";
 
@@ -24,43 +25,16 @@ export function useGameSync() {
   const [dadosGlobais, setDadosGlobaisLocal] = useState<GlobalData>(defaultGlobalData);
   const [jornadaPorDia, setJornadaPorDiaLocal] = useState<Record<number, any>>({});
   const campaignIdRef = useRef<string | null>(null);
+  const { userProfile, loading: authLoading } = useAuth();
+  
   const userProfileRef = useRef<{ role: 'gm' | 'player' | null; playerId: string | null }>({ role: null, playerId: null });
-
-  // Synchronize user profile role/playerId
+  
   useEffect(() => {
-    async function updateProfile() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: profile } = await supabase.from('profiles').select('role, player_id').eq('id', user.id).single();
-          if (profile) {
-            userProfileRef.current = {
-              role: profile.role as 'gm' | 'player',
-              playerId: profile.player_id
-            };
-            return;
-          }
-        }
-      } catch (err) {
-        console.error("Erro ao carregar perfil do usuário para permissões:", err);
-      }
-      userProfileRef.current = { role: null, playerId: null };
-    }
-
-    updateProfile();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        updateProfile();
-      } else {
-        userProfileRef.current = { role: null, playerId: null };
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
+    userProfileRef.current = {
+      role: (userProfile?.role as 'gm' | 'player') || null,
+      playerId: userProfile?.playerId || null,
     };
-  }, [supabase]);
+  }, [userProfile]);
 
   // Callbacks para refetch
   const fetchCampaign = useCallback(async () => {
@@ -109,7 +83,7 @@ export function useGameSync() {
   }, [supabase]);
 
   // Hook de Realtime
-  useRealtimeSync({
+  const syncChannel = useRealtimeSync(supabase, {
     onNpcsChange: fetchNpcs,
     onPlayersChange: fetchPlayers,
     onCampaignChange: fetchCampaign,
@@ -118,6 +92,11 @@ export function useGameSync() {
   });
 
   useEffect(() => {
+    if (authLoading) return;
+    // Evitar iniciar fetch prematuro se authLoading foi desabilitado por timeout,
+    // mas ainda não carregou o perfil de um usuário autenticado (se existir).
+    if (userProfile?.id && !userProfile?.role) return;
+
     async function fetchInitialData() {
       try {
         const [campaignResp, npcsResp, playersResp, suppliesResp, mapsResp, blocksResp] = await Promise.all([
@@ -130,7 +109,7 @@ export function useGameSync() {
         ]);
 
         let campaign = campaignResp.data;
-        if (!campaign) {
+        if (!campaign && userProfileRef.current.role === 'gm') {
           const { data: newCampaign, error } = await supabase.from("campaign")
             .insert({ name: 'Campanha MyRPG', current_day: 1, active_block_index: 0 })
             .select("*").single();
@@ -176,15 +155,16 @@ export function useGameSync() {
           });
           setJornadaPorDiaLocal(newJornada);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Erro ao carregar dados do Supabase:", error);
+        window.dispatchEvent(new CustomEvent('system-alert', { detail: { message: `Erro ao sincronizar dados: ${error.message || 'Desconhecido'}`, type: 'danger' } }));
       } finally {
         setLoading(false);
       }
     }
 
     fetchInitialData();
-  }, [supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [supabase, authLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Setters wrap local state update and Supabase mutation
   const setDiaAtual = useCallback((val: number | ((prev: number) => number)) => {
@@ -194,12 +174,12 @@ export function useGameSync() {
         supabase.from("campaign").update({ current_day: next }).eq("id", campaignIdRef.current)
           .then(({ error }) => { 
             if (error) console.error("Erro ao atualizar dia:", error); 
-            else supabase.channel('game-sync').send({ type: 'broadcast', event: 'refresh_campaign' });
+            else syncChannel?.send({ type: 'broadcast', event: 'refresh_campaign' });
           });
       }
       return next;
     });
-  }, [supabase]);
+  }, [supabase, syncChannel]);
 
   const setIndiceBlocoAtivo = useCallback((val: number | ((prev: number) => number)) => {
     setIndiceBlocoAtivoLocal(prev => {
@@ -208,12 +188,12 @@ export function useGameSync() {
         supabase.from("campaign").update({ active_block_index: next }).eq("id", campaignIdRef.current)
           .then(({ error }) => { 
             if (error) console.error("Erro ao atualizar bloco:", error); 
-            else supabase.channel('game-sync').send({ type: 'broadcast', event: 'refresh_campaign' });
+            else syncChannel?.send({ type: 'broadcast', event: 'refresh_campaign' });
           });
       }
       return next;
     });
-  }, [supabase]);
+  }, [supabase, syncChannel]);
 
   const setDadosGlobais = useCallback((val: GlobalData | ((prev: GlobalData) => GlobalData)) => {
     setDadosGlobaisLocal(prev => {
@@ -225,11 +205,18 @@ export function useGameSync() {
       // Sync deltas
       // NPCs
       if (prev.npcs !== next.npcs && role === 'gm') {
-        if (next.npcs.length > 0) {
-          const mappedNpcs = next.npcs.map(n => mapNpcToDB(n, cid));
+        const changedNpcs = next.npcs.filter(n => {
+          const prevNpc = prev.npcs.find(pn => pn.id === n.id);
+          return !prevNpc || JSON.stringify(prevNpc) !== JSON.stringify(n);
+        });
+
+        if (changedNpcs.length > 0) {
+          const mappedNpcs = changedNpcs.map(n => mapNpcToDB(n, cid));
           supabase.from("npcs").upsert(mappedNpcs).then(({ error }) => {
             if (error) {
               window.dispatchEvent(new CustomEvent('system-alert', { detail: { message: `Erro do banco de dados ao salvar NPC: ${error.message}`, type: 'danger' } }));
+            } else {
+              syncChannel?.send({ type: 'broadcast', event: 'refresh_npcs' });
             }
           });
         }
@@ -240,17 +227,25 @@ export function useGameSync() {
         if (deletedIds.length > 0) {
           supabase.from("npcs").delete().in("id", deletedIds).then(({ error }) => {
             if (error) console.error("Erro ao deletar NPCs no Supabase:", error);
+            else syncChannel?.send({ type: 'broadcast', event: 'refresh_npcs' });
           });
         }
       }
       // Players
       if (prev.players !== next.players) {
-        if (next.players.length > 0) {
-          const mappedPlayers = next.players.map(p => mapPlayerToDB(p, cid));
+        const changedPlayers = next.players.filter(p => {
+          const prevPlayer = prev.players.find(pp => pp.id === p.id);
+          return !prevPlayer || JSON.stringify(prevPlayer) !== JSON.stringify(p);
+        });
+
+        if (changedPlayers.length > 0) {
+          const mappedPlayers = changedPlayers.map(p => mapPlayerToDB(p, cid));
           if (role === 'gm') {
             supabase.from("players").upsert(mappedPlayers).then(({ error }) => {
               if (error) {
                 window.dispatchEvent(new CustomEvent('system-alert', { detail: { message: `Erro do banco de dados ao salvar Player: ${error.message}`, type: 'danger' } }));
+              } else {
+                syncChannel?.send({ type: 'broadcast', event: 'refresh_players' });
               }
             });
           } else if (role === 'player' && playerId) {
@@ -259,6 +254,8 @@ export function useGameSync() {
               supabase.from("players").update(myPlayer).eq("id", playerId).then(({ error }) => {
                 if (error) {
                   window.dispatchEvent(new CustomEvent('system-alert', { detail: { message: `Erro ao salvar seu Player: ${error.message}`, type: 'danger' } }));
+                } else {
+                  syncChannel?.send({ type: 'broadcast', event: 'refresh_players' });
                 }
               });
             }
@@ -271,6 +268,7 @@ export function useGameSync() {
         if (deletedIds.length > 0 && role === 'gm') {
           supabase.from("players").delete().in("id", deletedIds).then(({ error }) => {
             if (error) console.error("Erro ao deletar players no Supabase:", error);
+            else syncChannel?.send({ type: 'broadcast', event: 'refresh_players' });
           });
         }
       }
@@ -283,12 +281,13 @@ export function useGameSync() {
           people: next.food.people
         }, { onConflict: 'campaign_id' }).then(({ error }) => {
           if (error) console.error("Erro ao salvar suprimentos:", error);
+          else syncChannel?.send({ type: 'broadcast', event: 'refresh_supplies' });
         });
       }
       
       return next;
     });
-  }, [supabase]);
+  }, [supabase, syncChannel]);
 
   const setJornadaPorDia = useCallback((val: Record<number, any> | ((prev: Record<number, any>) => Record<number, any>)) => {
     setJornadaPorDiaLocal(prev => {
@@ -305,12 +304,12 @@ export function useGameSync() {
 
       allDays.forEach(day => {
         if (prev[day] !== next[day] && next[day] && next[day].blocos) {
-          syncJourneyToSupabase(cid, day, next[day].blocos, supabase, role, userProfileRef.current.playerId);
+          syncJourneyToSupabase(cid, day, next[day].blocos, supabase, syncChannel, role, userProfileRef.current.playerId);
         }
       });
       return next;
     });
-  }, [supabase]);
+  }, [supabase, syncChannel]);
 
   return {
     diaAtual,
@@ -326,7 +325,7 @@ export function useGameSync() {
 }
 
 // Helper to sync journey blocks
-async function syncJourneyToSupabase(campaignId: string, dayNumber: number, blocos: any[], supabase: any, role: string | null, playerId: string | null) {
+async function syncJourneyToSupabase(campaignId: string, dayNumber: number, blocos: any[], supabase: any, syncChannel: any, role: string | null, playerId: string | null) {
   try {
     if (role === 'gm') {
       // 1. Upsert day
@@ -349,7 +348,7 @@ async function syncJourneyToSupabase(campaignId: string, dayNumber: number, bloc
       }));
 
       await supabase.from("journey_blocks").upsert(mappedBlocks, { onConflict: 'day_id,block_index' });
-      supabase.channel('game-sync').send({ type: 'broadcast', event: 'refresh_journey' });
+      syncChannel?.send({ type: 'broadcast', event: 'refresh_journey' });
       
     } else if (role === 'player' && playerId) {
       // Find the block IDs first
@@ -366,10 +365,11 @@ async function syncJourneyToSupabase(campaignId: string, dayNumber: number, bloc
                await supabase.rpc('merge_player_session', { p_block_id: b.id, p_player_id: playerId, p_session_data: playerSession });
             }
          }
-         supabase.channel('game-sync').send({ type: 'broadcast', event: 'refresh_journey' });
+         syncChannel?.send({ type: 'broadcast', event: 'refresh_journey' });
       }
     }
   } catch (error) {
     console.error("Erro ao sincronizar jornada:", error);
   }
 }
+

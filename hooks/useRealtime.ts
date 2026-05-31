@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useMemo } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useEffect, useRef, useState } from "react";
+import { SupabaseClient, RealtimeChannel } from "@supabase/supabase-js";
 
 // Este hook escuta as mudanças no banco e dispara callbacks para atualizar o estado local
-export function useRealtimeSync(callbacks: {
-  onNpcsChange: () => void;
-  onPlayersChange: () => void;
-  onCampaignChange: () => void;
-  onJourneyChange: () => void;
-  onSuppliesChange: () => void;
-}) {
-  const supabase = useMemo(() => createClient(), []);
+export function useRealtimeSync(
+  supabase: SupabaseClient,
+  callbacks: {
+    onNpcsChange: () => void;
+    onPlayersChange: () => void;
+    onCampaignChange: () => void;
+    onJourneyChange: () => void;
+    onSuppliesChange: () => void;
+  }
+) {
+  const [channel, setChannel] = useState<RealtimeChannel | null>(null);
 
   const callbacksRef = useRef(callbacks);
 
@@ -20,7 +23,7 @@ export function useRealtimeSync(callbacks: {
   }, [callbacks]);
 
   useEffect(() => {
-    const channel = supabase.channel(`game-sync`)
+    const newChannel = supabase.channel(`game-sync`)
       .on(
         "postgres_changes", { event: "*", schema: "public", table: "npcs" },
         () => callbacksRef.current.onNpcsChange()
@@ -51,8 +54,12 @@ export function useRealtimeSync(callbacks: {
       .on("broadcast", { event: "refresh_supplies" }, () => callbacksRef.current.onSuppliesChange())
       .subscribe();
 
+    setChannel(newChannel);
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(newChannel);
     };
   }, [supabase]);
+
+  return channel;
 }

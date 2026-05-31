@@ -9,55 +9,60 @@ interface NpcCardPlayerProps {
 export default function NpcCardPlayer({ npc }: NpcCardPlayerProps) {
   const { setModals, setActiveData } = useAppContext();
 
+  const activeNpc = npc.isTransformed && npc.transformation ? npc.transformation : npc;
+
   const openDetail = () => {
     setActiveData(npc);
     setModals((prev: any) => ({ ...prev, summaryCard: true }));
   };
 
-  const factionBorder = npc.faction === 'enemy' ? 'border-danger' : npc.faction === 'ally' ? 'border-success' : 'border-neutral';
+  const factionBorder = activeNpc.faction === 'enemy' ? 'border-danger' : activeNpc.faction === 'ally' ? 'border-success' : 'border-neutral';
 
   return (
-    <div className={`npc-card glass-panel clickable-card ${npc.isDead ? "is-dead" : ""} ${factionBorder}`} onClick={openDetail}>
-      {npc.isDead && <div className="status-dead-overlay">💀</div>}
+    <div className={`npc-card glass-panel clickable-card ${activeNpc.isDead ? "is-dead" : ""} ${factionBorder}`} onClick={openDetail}>
+      {activeNpc.isDead && <div className="status-dead-overlay">💀</div>}
       
       <div className="npc-card-header">
-        {npc.image ? (
-          <img src={npc.image} className="npc-card-avatar" alt={npc.name} />
+        {activeNpc.image ? (
+          <img src={activeNpc.image} className="npc-card-avatar" alt={activeNpc.name} style={{ border: npc.isTransformed ? "2px solid var(--accent-primary)" : "none" }} />
         ) : (
-          <div className="npc-card-placeholder">{npc.name.charAt(0).toUpperCase()}</div>
+          <div className="npc-card-placeholder" style={{ border: npc.isTransformed ? "2px solid var(--accent-primary)" : "none" }}>{(activeNpc.name || "?").charAt(0).toUpperCase()}</div>
         )}
         <div className="npc-card-title-area">
-          <div className="npc-card-name">{npc.name}</div>
-          <div className="npc-card-title">{npc.title || 'Sem título'}</div>
+          <div className="npc-card-name" style={{ color: npc.isTransformed ? "var(--accent-primary)" : "inherit", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+            <span>{activeNpc.name}</span>
+            {npc.isTransformed && <span style={{fontSize: "0.65rem", backgroundColor: "var(--accent-primary)", padding: "2px 6px", borderRadius: "8px", color: "#fff", fontWeight: "bold", letterSpacing: "0.05em", textTransform: "uppercase"}}>Transformado</span>}
+          </div>
+          <div className="npc-card-title">{activeNpc.title || 'Sem título'}</div>
           <div className="npc-card-meta">
-            <span>{npc.race || '---'}</span>
+            <span>{activeNpc.race || '---'}</span>
             <span>•</span>
-            <span>ND {npc.cr || '0'}</span>
+            <span>ND {activeNpc.cr || '0'}</span>
           </div>
           <div className="npc-card-active-conditions">
-            {npc.tempCond?.map((c: string, i: number) => <span key={i} className="active-cond-badge">{c}</span>)}
-            {npc.tempRes?.map((r: string, i: number) => <span key={i} className="active-res-badge">{r}</span>)}
+            {activeNpc.tempCond?.map((c: string, i: number) => <span key={i} className="active-cond-badge">{c}</span>)}
+            {activeNpc.tempRes?.map((r: string, i: number) => <span key={i} className="active-res-badge">{r}</span>)}
           </div>
         </div>
       </div>
 
       <div className="npc-card-narrative-details">
-        {npc.mot && (
+        {activeNpc.mot && (
           <div className="narrative-block">
             <span className="narrative-label">Motivações</span>
-            <p className="narrative-text">{npc.mot}</p>
+            <p className="narrative-text">{activeNpc.mot}</p>
           </div>
         )}
-        {npc.itemsVis && (
+        {activeNpc.itemsVis && (
           <div className="narrative-block">
             <span className="narrative-label">Itens Visíveis</span>
-            <p className="narrative-text">{npc.itemsVis}</p>
+            <p className="narrative-text">{activeNpc.itemsVis}</p>
           </div>
         )}
-        {npc.traits && (
+        {activeNpc.traits && (
           <div className="narrative-block">
             <span className="narrative-label">Traços</span>
-            <p className="narrative-text">{npc.traits}</p>
+            <p className="narrative-text">{activeNpc.traits}</p>
           </div>
         )}
       </div>

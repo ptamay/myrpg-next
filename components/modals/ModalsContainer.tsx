@@ -25,7 +25,7 @@ export default function ModalsContainer() {
   return (
     <>
       <style>{`
-        .modal-content {
+        .modal-content:not(.post-it-modal) {
            background: #09090b !important;
         }
       `}</style>
@@ -34,7 +34,7 @@ export default function ModalsContainer() {
       
       <PlayerFormModal isOpen={modals.playerForm} onClose={() => close("playerForm")} />
       <PlayerManageModal isOpen={modals.playerManage} onClose={() => close("playerManage")} player={activeData} />
-      {modals.playerDetail && <PlayerDetailModal isOpen={modals.playerDetail} onClose={() => close("playerDetail")} player={activeData} />}
+      <PlayerDetailModal isOpen={modals.playerDetail} onClose={() => close("playerDetail")} player={activeData} />
       
       <GlobalEventModal isOpen={modals.globalEvent} onClose={() => close("globalEvent")} />
       <GlobalEventDetailModal isOpen={modals.globalEventDetail} onClose={() => close("globalEventDetail")} />

@@ -3,11 +3,15 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
+import { UserSession } from "@/types/session";
 
 interface AuthContextData {
   isAuthenticated: boolean;
   user: User | null;
   session: Session | null;
+  userProfile: UserSession | null;
+  isGM: boolean;
+  isPlayer: boolean;
   logout: () => Promise<void>;
   loading: boolean;
 }
@@ -18,35 +22,90 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [userProfile, setUserProfile] = useState<UserSession | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
+    const fetchProfile = async (currentUser: User | null) => {
+      if (!currentUser) {
+        setUserProfile(null);
+        return;
+      }
+      try {
+        const { data, error } = await supabase.from('profiles').select('display_name, role, player_id').eq('id', currentUser.id).single();
+        
+        if (error) {
+          console.error("Erro na query de profiles:", error);
+          return;
+        }
+
+        if (data) {
+          let avatarUrl = '';
+          if (data.player_id) {
+            const { data: playerData } = await supabase.from('players').select('image_url').eq('id', data.player_id).single();
+            if (playerData && playerData.image_url) {
+              avatarUrl = supabase.storage.from('images').getPublicUrl(playerData.image_url).data.publicUrl;
+            }
+          }
+          setUserProfile({
+            id: currentUser.id,
+            name: data.display_name || 'Jogador',
+            email: currentUser.email || '',
+            role: data.role as 'gm' | 'player',
+            playerId: data.player_id,
+            avatarUrl: avatarUrl,
+            isOnline: true
+          });
+        }
+      } catch (err) {
+        console.error("Erro interno ao buscar perfil:", err);
+      }
+    };
+
+    let isInitialized = false;
+
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        const { data: { user } } = await supabase.auth.getUser();
+        const currentUser = session?.user || null;
         setSession(session);
-        setUser(user || null);
-        setIsAuthenticated(!!user);
+        setUser(currentUser);
+        setIsAuthenticated(!!currentUser);
+        await fetchProfile(currentUser);
       } catch (error) {
         console.error("Erro ao verificar sessão Supabase:", error);
       } finally {
-        setLoading(false);
+        if (!isInitialized) {
+          isInitialized = true;
+          setLoading(false);
+        }
       }
     };
 
     initializeAuth();
 
+    // Safety timeout: after 3s, force loading=false regardless
+    const timeout = setTimeout(() => {
+      if (!isInitialized) {
+        console.warn("AuthContext timeout: Forcing loading to false.");
+        isInitialized = true;
+        setLoading(false);
+      }
+    }, 3000);
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      async (_event, session) => {
+        const currentUser = session?.user || null;
         setSession(session);
-        setUser(session?.user || null);
-        setIsAuthenticated(!!session);
+        setUser(currentUser);
+        setIsAuthenticated(!!currentUser);
+        await fetchProfile(currentUser);
       }
     );
 
     return () => {
+      clearTimeout(timeout);
       subscription.unsubscribe();
     };
   }, []);
@@ -56,15 +115,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.auth.signOut();
     } catch (error) {
       console.error("Erro ao deslogar:", error);
+    } finally {
+      setUser(null);
+      setSession(null);
+      setIsAuthenticated(false);
+      setUserProfile(null);
     }
   };
 
-  if (loading) {
-    return <div style={{display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center'}}>Carregando sessão...</div>;
-  }
-
+  // IMPORTANT: Do NOT block rendering with a loading screen here.
+  // The Next.js middleware already validates auth server-side.
+  // Blocking here causes infinite loading if the Supabase client
+  // takes too long to initialize (network issues, cookie parsing, etc.)
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, session, logout, loading }}>
+    <AuthContext.Provider value={{ 
+      isAuthenticated, user, session, logout, loading,
+      userProfile, isGM: userProfile?.role === 'gm', isPlayer: userProfile?.role === 'player'
+    }}>
       {children}
     </AuthContext.Provider>
   );

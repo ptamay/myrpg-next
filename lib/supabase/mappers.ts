@@ -37,7 +37,9 @@ export function mapNpcToDB(npc: Npc, campaignId: string) {
     spell_slots_used: npc.spellSlotsUsed || {},
     is_dead: npc.isDead || false,
     is_hidden: npc.isHidden || false,
-    image_url: npc.image || null
+    image_url: npc.image || null,
+    transformation: npc.transformation || null,
+    is_transformed: npc.isTransformed || false
   };
 }
 
@@ -77,7 +79,9 @@ export function mapDBToNpc(row: any): Npc {
     spellSlotsUsed: row.spell_slots_used || {},
     isDead: row.is_dead,
     isHidden: row.is_hidden,
-    image: row.image_url
+    image: row.image_url,
+    transformation: row.transformation,
+    isTransformed: row.is_transformed || false
   };
 }
 
@@ -113,7 +117,9 @@ export function mapPlayerToDB(player: Player, campaignId: string) {
     is_dead: player.isDead || false,
     is_sleeping_action: player.isSleepingAction || false,
     exhaustion_level: player.exhaustionLevel || 0,
-    min_sleep_req: player.minSleepReq || 8
+    min_sleep_req: player.minSleepReq || 8,
+    transformation: player.transformation || null,
+    is_transformed: player.isTransformed || false
   };
 }
 
@@ -148,6 +154,8 @@ export function mapDBToPlayer(row: any): Player {
     isDead: row.is_dead,
     isSleepingAction: row.is_sleeping_action,
     exhaustionLevel: row.exhaustion_level,
-    minSleepReq: row.min_sleep_req || 8
+    minSleepReq: row.min_sleep_req || 8,
+    transformation: row.transformation,
+    isTransformed: row.is_transformed || false
   };
 }

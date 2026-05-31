@@ -13,9 +13,7 @@ interface SystemDialogModalsProps {
 }
 
 export default function SystemDialogModals({ type, isOpen, options, onClose, onConfirm }: SystemDialogModalsProps) {
-  if (!isOpen) return null;
-
-  const { title, message, confirmText, cancelText, type: dialogType } = options;
+  const { title, message, confirmText, cancelText, type: dialogType } = options || {};
 
   const getDialogStyle = (t: DialogType) => {
     switch (t) {
@@ -35,6 +33,7 @@ export default function SystemDialogModals({ type, isOpen, options, onClose, onC
 
   return (
     <Modal isOpen={isOpen} onClose={type === "alert" ? onClose : () => {}} id={`system-${type}-modal`}>
+      {options && (
       <div 
         className="glass-panel" 
         style={{ 
@@ -74,6 +73,7 @@ export default function SystemDialogModals({ type, isOpen, options, onClose, onC
           </button>
         </div>
       </div>
+      )}
     </Modal>
   );
 }

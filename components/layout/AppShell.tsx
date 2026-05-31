@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { diaAtual, indiceBlocoAtivo, jornadaPorDia } = useAppContext();
-  const { loading, logout } = useAuth();
+  const { logout } = useAuth();
   const { showAlert } = useSystemDialog();
   const pathname = usePathname();
   const router = useRouter();
@@ -59,8 +59,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("day-passed-alert", handleDayPassed);
   }, [showAlert]);
 
-  if (loading) return null;
-
   if (session && isPlayer && !session.playerId) {
     return (
       <>
@@ -81,7 +79,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               className="btn btn-primary"
               onClick={async () => {
                 await logout();
-                router.push("/login");
+                await new Promise(r => setTimeout(r, 100));
+                router.replace("/login");
+                router.refresh();
               }}
               style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
             >

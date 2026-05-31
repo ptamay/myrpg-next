@@ -125,7 +125,6 @@ export default function Sidebar() {
   // Initials for avatar fallback
   const getInitials = () => {
     if (session?.name) return session.name.charAt(0).toUpperCase();
-    if (session?.email) return session.email.charAt(0).toUpperCase();
     return "U";
   };
 
@@ -162,7 +161,7 @@ export default function Sidebar() {
               background: "hsla(0, 0%, 100%, 0.05)",
               borderColor: "var(--border-subtle)"
             }}
-            title={session.email || session.name}
+            title={session.name || "Usuário"}
           >
             {session.avatarUrl ? (
               <img 
@@ -200,8 +199,13 @@ export default function Sidebar() {
         <button
           className="nav-tab logout-btn"
           onClick={async () => {
-             await logout();
-             router.push("/login");
+             try {
+               await logout();
+             } catch (err) {
+               console.error("Sidebar logout fallback:", err);
+             } finally {
+               window.location.href = "/login";
+             }
           }}
           title="Sair do Sistema"
         >

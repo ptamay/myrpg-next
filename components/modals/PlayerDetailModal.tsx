@@ -3,41 +3,59 @@
 import React, { useState } from "react";
 import Modal from "../ui/Modal";
 import { useAppContext } from "@/contexts/AppContext";
+import { useUserSession } from "@/contexts/UserSessionContext";
 
 export default function PlayerDetailModal({ isOpen, onClose, player }: { isOpen: boolean; onClose: () => void; player: any }) {
-  const { setModals, setActiveData } = useAppContext();
+  const { setModals, setActiveData, dadosGlobais } = useAppContext();
+  const { isGM, session } = useUserSession();
+  const isOwner = player?.id === session?.playerId;
   const [activeTab, setActiveTab] = useState("stats");
+  const [isViewingTransformation, setIsViewingTransformation] = useState(false);
 
-  if (!player) return null;
+  // Buscar player atualizado no estado global (reatividade)
+  const freshPlayer = dadosGlobais.players.find((p: any) => p.id === player?.id) || player;
 
-  const isDead = player.isDead;
+  React.useEffect(() => {
+    if (isOpen && freshPlayer) {
+      setIsViewingTransformation(freshPlayer.isTransformed || false);
+    }
+  }, [isOpen, freshPlayer?.id, freshPlayer?.isTransformed]);
+
+  const isDead = freshPlayer?.isDead;
   
   const handleEdit = () => {
-    setActiveData(player);
+    setActiveData(freshPlayer);
     onClose();
     setModals((prev: any) => ({ ...prev, playerForm: true }));
   };
 
-  const hpPct = player.hpMax > 0 ? Math.max(0, Math.min(100, ((player.hpCurrent || 0) / player.hpMax) * 100)) : 0;
+  const hpPct = freshPlayer?.hpMax > 0 ? Math.max(0, Math.min(100, ((freshPlayer.hpCurrent || 0) / freshPlayer.hpMax) * 100)) : 0;
 
   const calcMod = (val: number | string) => {
     const m = Math.floor((parseInt((val || 10).toString()) - 10) / 2);
     return m >= 0 ? `+${m}` : m;
   };
 
-  const attrList = [
-    { key: "FOR", label: "Força", val: player.str || 10 },
-    { key: "DES", label: "Destreza", val: player.dex || 10 },
-    { key: "CON", label: "Constituição", val: player.con || 10 },
-    { key: "INT", label: "Inteligência", val: player.int || 10 },
-    { key: "SAB", label: "Sabedoria", val: player.wis || 10 },
-    { key: "CAR", label: "Carisma", val: player.cha || 10 },
-  ];
+  const activePlayer = (isViewingTransformation && freshPlayer?.transformation) ? freshPlayer.transformation : freshPlayer;
+
+  const attrList = activePlayer ? [
+    { key: "FOR", label: "Força", val: activePlayer.str || 10 },
+    { key: "DES", label: "Destreza", val: activePlayer.dex || 10 },
+    { key: "CON", label: "Constituição", val: activePlayer.con || 10 },
+    { key: "INT", label: "Inteligência", val: activePlayer.int || 10 },
+    { key: "SAB", label: "Sabedoria", val: activePlayer.wis || 10 },
+    { key: "CAR", label: "Carisma", val: activePlayer.cha || 10 },
+  ] : [];
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} id="player-detail-modal">
-      <div className={`modal-content ${isDead ? "dead-modal-content" : ""}`} style={{ maxWidth: "850px", width: "100%", background: "#09090b", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", padding: 0, overflow: "hidden", display: "flex", flexDirection: "column", maxHeight: "90vh" }}>
+      {freshPlayer && (
+      <div className={`modal-content ${isDead ? "dead-modal-content" : ""}`} style={{ maxWidth: "850px", width: "100%", background: "#09090b", border: "1px solid rgba(255,255,255,0.05)", borderRadius: "12px", padding: 0, overflow: "hidden", display: "flex", flexDirection: "column", maxHeight: "90vh", position: "relative" }}>
         
+        {isViewingTransformation && (
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "linear-gradient(45deg, rgba(var(--accent-primary-rgb), 0.1), transparent)", pointerEvents: "none" }} />
+        )}
+
         {isDead && (
           <div className="modal-skull-overlay">
             <svg viewBox="0 0 24 24" width="60%" height="60%" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
@@ -51,31 +69,44 @@ export default function PlayerDetailModal({ isOpen, onClose, player }: { isOpen:
         
         <header style={{ padding: "24px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(0,0,0,0.2)" }}>
           <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
-            <div style={{ width: "80px", height: "80px", borderRadius: "50%", overflow: "hidden", border: `2px solid rgba(255,255,255,0.15)`, background: "rgba(255,255,255,0.05)" }}>
-              {player.image ? (
-                <img src={player.image} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover", filter: isDead ? "grayscale(100%)" : "none" }} />
+            <div style={{ width: "80px", height: "80px", borderRadius: "50%", overflow: "hidden", border: isViewingTransformation ? "2px solid var(--accent-primary)" : `2px solid rgba(255,255,255,0.15)`, background: "rgba(255,255,255,0.05)" }}>
+              {activePlayer.image ? (
+                <img src={activePlayer.image} alt={activePlayer.name} style={{ width: "100%", height: "100%", objectFit: "cover", filter: isDead ? "grayscale(100%)" : "none" }} />
               ) : (
                 <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem", fontWeight: "bold", color: "var(--text-muted)" }}>
-                  {player.name.charAt(0).toUpperCase()}
+                  {(activePlayer.name || "?").charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <div style={{ fontSize: "1.8rem", fontWeight: 900, color: "#fff", margin: 0, letterSpacing: "-0.02em" }}>{player.name}</div>
-                {player.inspiration && <span title="Inspiração" style={{ fontSize: "1.2rem" }}>🌟</span>}
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                <div style={{ fontSize: "1.8rem", fontWeight: 900, color: isViewingTransformation ? "var(--accent-primary)" : "#fff", margin: 0, letterSpacing: "-0.02em" }}>{activePlayer.name}</div>
+                {isViewingTransformation && <span style={{fontSize: "0.6rem", backgroundColor: "var(--accent-primary)", padding: "2px 6px", borderRadius: "8px", color: "#fff", fontWeight: "bold"}}>TRANSF.</span>}
+                {activePlayer.inspiration && <span title="Inspiração" style={{ fontSize: "1.2rem" }}>🌟</span>}
               </div>
               <div style={{ fontSize: "1rem", color: "var(--accent-primary)", fontWeight: 700, marginTop: "4px" }}>
-                {player.playerClass || player.classLevel || 'Sem classe'}{player.playerLevel ? ` Nv. ${player.playerLevel}` : ''} <span style={{ color: "var(--text-muted)", fontWeight: "normal" }}>•</span> {player.race || 'Sem raça'}
+                {activePlayer.playerClass || activePlayer.classLevel || 'Sem classe'}{activePlayer.playerLevel ? ` Nv. ${activePlayer.playerLevel}` : ''} <span style={{ color: "var(--text-muted)", fontWeight: "normal" }}>•</span> {activePlayer.race || 'Sem raça'}
               </div>
-              {player.playerName && (
+              {freshPlayer.playerName && !isViewingTransformation && (
                 <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: "4px" }}>
-                  Jogador: <strong>{player.playerName}</strong>
+                  Jogador: <strong>{freshPlayer.playerName}</strong>
                 </div>
               )}
             </div>
           </div>
           <div style={{ display: "flex", gap: "10px" }}>
+            {freshPlayer.transformation && isGM && (
+              <button 
+                className={`btn ${isViewingTransformation ? 'primary-btn' : 'secondary-btn'} small-btn`} 
+                onClick={() => setIsViewingTransformation(!isViewingTransformation)}
+                style={{ padding: "8px 16px", borderRadius: "8px", transition: 'all 0.3s' }}
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none" style={{ marginRight: "4px", verticalAlign: "middle", display: "inline-block" }}>
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+                {isViewingTransformation ? "Ver Original" : "Transformar!"}
+              </button>
+            )}
             <button onClick={handleEdit} className="btn secondary-btn" style={{ padding: "8px 16px", borderRadius: "8px" }}>
               Editar Ficha
             </button>
@@ -109,28 +140,28 @@ export default function PlayerDetailModal({ isOpen, onClose, player }: { isOpen:
                 <div style={{ background: "rgba(255, 255, 255, 0.02)", border: `1px solid rgba(255, 255, 255, 0.05)`, borderRadius: "8px", padding: "16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                   <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase" }}>Pontos de Vida</span>
                   <div style={{ fontSize: "2rem", fontWeight: 900, color: "#fff", margin: "4px 0" }}>
-                    {player.hpCurrent || 0} <span style={{ fontSize: "1rem", color: "var(--text-muted)" }}>/ {player.hpMax || 0}</span>
+                    {activePlayer.hpCurrent || 0} <span style={{ fontSize: "1rem", color: "var(--text-muted)" }}>/ {activePlayer.hpMax || 0}</span>
                   </div>
                 </div>
                 
                 <div style={{ background: "rgba(255, 255, 255, 0.02)", border: `1px solid rgba(255, 255, 255, 0.05)`, borderRadius: "8px", padding: "16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                   <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase" }}>Classe de Armadura</span>
                   <div style={{ fontSize: "2rem", fontWeight: 900, color: "#fff", margin: "4px 0" }}>
-                    {player.ac || 10}
+                    {activePlayer.ac || 10}
                   </div>
                 </div>
  
                 <div style={{ background: "rgba(255, 255, 255, 0.02)", border: `1px solid rgba(255, 255, 255, 0.05)`, borderRadius: "8px", padding: "16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                   <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase" }}>Proficiência</span>
                   <div style={{ fontSize: "2rem", fontWeight: 900, color: "#fff", margin: "4px 0" }}>
-                    +{player.profBonus || 2}
+                    +{activePlayer.profBonus || 2}
                   </div>
                 </div>
  
                 <div style={{ background: "rgba(255, 255, 255, 0.02)", border: `1px solid rgba(255, 255, 255, 0.05)`, borderRadius: "8px", padding: "16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                   <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase" }}>Deslocamento</span>
                   <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "#fff", margin: "4px 0", textAlign: "center" }}>
-                    {player.speed || "9m"}
+                    {activePlayer.speed || "9m"}
                   </div>
                 </div>
               </div>
@@ -139,7 +170,7 @@ export default function PlayerDetailModal({ isOpen, onClose, player }: { isOpen:
                 <div>
                   <h3 style={{ fontSize: "1rem", color: "#fff", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "8px", marginBottom: "12px" }}>Salvaguardas</h3>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                    {Array.isArray(player.saves) && player.saves.length > 0 ? player.saves.map((s: string) => (
+                    {Array.isArray(activePlayer.saves) && activePlayer.saves.length > 0 ? activePlayer.saves.map((s: string) => (
                        <span key={s} style={{ background: "rgba(255, 255, 255, 0.05)", color: "#e2e8f0", padding: "4px 10px", borderRadius: "12px", fontSize: "0.8rem", fontWeight: "bold", border: "1px solid rgba(255, 255, 255, 0.08)" }}>{s}</span>
                     )) : <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Nenhuma salvaguarda selecionada.</span>}
                   </div>
@@ -147,7 +178,7 @@ export default function PlayerDetailModal({ isOpen, onClose, player }: { isOpen:
                 <div>
                   <h3 style={{ fontSize: "1rem", color: "#fff", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "8px", marginBottom: "12px" }}>Perícias</h3>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                    {Array.isArray(player.skills) && player.skills.length > 0 ? player.skills.map((s: string) => (
+                    {Array.isArray(activePlayer.skills) && activePlayer.skills.length > 0 ? activePlayer.skills.map((s: string) => (
                        <span key={s} style={{ background: "rgba(255, 255, 255, 0.05)", color: "#e2e8f0", padding: "4px 10px", borderRadius: "12px", fontSize: "0.8rem", fontWeight: "bold", border: "1px solid rgba(255, 255, 255, 0.08)" }}>{s}</span>
                     )) : <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Nenhuma perícia selecionada.</span>}
                   </div>
@@ -161,10 +192,10 @@ export default function PlayerDetailModal({ isOpen, onClose, player }: { isOpen:
               <div>
                 <h3 style={{ fontSize: "1.1rem", color: "#fff", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "8px", marginBottom: "12px" }}>Ataques e Habilidades</h3>
                 <div style={{ whiteSpace: "pre-wrap", color: "var(--text-secondary)", fontSize: "0.95rem", lineHeight: 1.5, background: "rgba(0,0,0,0.2)", padding: "16px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.05)" }}>
-                  {Array.isArray(player.attacks) ? (
-                    player.attacks.length > 0 ? (
+                  {Array.isArray(activePlayer.attacks) ? (
+                    activePlayer.attacks.length > 0 ? (
                       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                        {player.attacks.map((atk: any, idx: number) => (
+                        {activePlayer.attacks.map((atk: any, idx: number) => (
                           <div key={idx} style={{ display: "flex", background: "rgba(255,255,255,0.05)", borderRadius: "6px", padding: "8px 12px", alignItems: "center", fontSize: "0.9rem" }}>
                             <div style={{ width: "45%", fontWeight: 800, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                               {atk.name ? atk.name.charAt(0).toUpperCase() + atk.name.slice(1) : 'Ataque'}
@@ -180,7 +211,7 @@ export default function PlayerDetailModal({ isOpen, onClose, player }: { isOpen:
                       </div>
                     ) : "Nenhum ataque ou habilidade cadastrada."
                   ) : (
-                    player.attacks || "Nenhum ataque ou habilidade cadastrada."
+                    activePlayer.attacks || "Nenhum ataque ou habilidade cadastrada."
                   )}
                 </div>
               </div>
@@ -192,20 +223,21 @@ export default function PlayerDetailModal({ isOpen, onClose, player }: { isOpen:
               <div>
                 <h3 style={{ fontSize: "1.1rem", color: "#fff", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "8px", marginBottom: "12px" }}>Inventário</h3>
                 <div style={{ whiteSpace: "pre-wrap", color: "var(--text-secondary)", fontSize: "0.95rem", lineHeight: 1.5, background: "rgba(0,0,0,0.2)", padding: "16px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.05)" }}>
-                  {player.inventory || "Inventário vazio."}
+                  {activePlayer.inventory || "Inventário vazio."}
                 </div>
               </div>
               
               <div>
                 <h3 style={{ fontSize: "1.1rem", color: "#fff", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "8px", marginBottom: "12px" }}>Background / Anotações</h3>
                 <div style={{ whiteSpace: "pre-wrap", color: "var(--text-secondary)", fontSize: "0.95rem", lineHeight: 1.5, background: "rgba(0,0,0,0.2)", padding: "16px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.05)" }}>
-                  {player.notes || "Sem anotações."}
+                  {activePlayer.notes || "Sem anotações."}
                 </div>
               </div>
             </div>
           )}
         </div>
       </div>
+      )}
     </Modal>
   );
 }

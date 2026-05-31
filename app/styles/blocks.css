@@ -681,6 +681,81 @@
     text-shadow: 0 0 10px hsla(0, 0%, 100%, 0.2);
 }
 
+.hp-current-input {
+    font-size: 1.3rem;
+    font-weight: 900;
+    color: var(--text-primary);
+    text-shadow: 0 0 10px hsla(0, 0%, 100%, 0.2);
+    background: transparent;
+    border: none;
+    width: 45px;
+    text-align: right;
+    outline: none;
+}
+
+.hp-current-input::-webkit-outer-spin-button,
+.hp-current-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.hp-current-input {
+    -moz-appearance: textfield;
+}
+
+.hp-adjuster-group {
+    display: flex;
+    align-items: center;
+    background: hsla(0, 0%, 100%, 0.03);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    height: 24px;
+}
+
+.hp-adjuster-group .hp-mod-btn {
+    border: none !important;
+    border-radius: 0 !important;
+    height: 24px !important;
+    width: 24px !important;
+    background: transparent !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.2s;
+    color: var(--text-primary);
+}
+
+.hp-adjuster-group .hp-mod-btn:hover {
+    background: var(--accent-primary) !important;
+    color: white !important;
+}
+
+.hp-mod-amount-input {
+    width: 35px;
+    height: 24px;
+    border: none !important;
+    border-left: 1px solid var(--border-subtle) !important;
+    border-right: 1px solid var(--border-subtle) !important;
+    background: transparent !important;
+    color: var(--text-primary) !important;
+    text-align: center;
+    font-size: 0.8rem !important;
+    outline: none !important;
+}
+
+.hp-mod-amount-input::-webkit-outer-spin-button,
+.hp-mod-amount-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.hp-mod-amount-input {
+    -moz-appearance: textfield;
+}
+
 .hp-max-val {
     font-size: 0.9rem;
     color: var(--text-muted);

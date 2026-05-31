@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { DiaryEntry, Mural } from "@/types/cronicas";
 import { createClient } from "@/lib/supabase/client";
 import { useSystemDialog } from "@/contexts/SystemDialogContext";
@@ -9,10 +9,10 @@ export function useDiario() {
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const { showAlert } = useSystemDialog();
+  const supabase = useMemo(() => createClient(), []);
 
   const fetchEntries = useCallback(async () => {
     try {
-      const supabase = createClient();
       const { data, error } = await supabase.from('diary_entries').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       if (data) {
@@ -39,7 +39,6 @@ export function useDiario() {
   useEffect(() => {
     fetchEntries();
 
-    const supabase = createClient();
     const channel = supabase.channel(`diary_sync`)
       .on("postgres_changes", { event: "*", schema: "public", table: "diary_entries" }, () => {
         fetchEntries();
@@ -53,8 +52,7 @@ export function useDiario() {
 
   const add = useCallback(async (entry: DiaryEntry) => {
     try {
-      const supabase = createClient();
-      const { data: campaign } = await supabase.from('campaign').select('id').limit(1).single();
+      const { data: campaign } = await supabase.from('campaign').select('id').limit(1).maybeSingle();
       const row = {
         id: entry.id,
         campaign_id: campaign?.id,
@@ -75,7 +73,6 @@ export function useDiario() {
 
   const remove = useCallback(async (id: string) => {
     try {
-      const supabase = createClient();
       const { error } = await supabase.from('diary_entries').delete().eq('id', id);
       if (error) throw error;
       setEntries(prev => prev.filter(e => e.id !== id));
@@ -84,7 +81,6 @@ export function useDiario() {
 
   const update = useCallback(async (entry: DiaryEntry) => {
     try {
-      const supabase = createClient();
       const row = {
         session_number: entry.sessionNumber,
         session_title: entry.sessionTitle,
@@ -107,10 +103,10 @@ export function useMurais() {
   const [murais, setMurais] = useState<Mural[]>([]);
   const [loading, setLoading] = useState(true);
   const { showAlert } = useSystemDialog();
+  const supabase = useMemo(() => createClient(), []);
 
   const fetchMurais = useCallback(async () => {
     try {
-      const supabase = createClient();
       const { data: mData, error: mErr } = await supabase.from('murals').select('*');
       if (mErr) throw mErr;
       const { data: cData, error: cErr } = await supabase.from('mural_cards').select('*');
@@ -159,7 +155,6 @@ export function useMurais() {
   useEffect(() => {
     fetchMurais();
 
-    const supabase = createClient();
     const channel = supabase.channel(`murals_sync`)
       .on("postgres_changes", { event: "*", schema: "public", table: "murals" }, () => { fetchMurais(); })
       .on("postgres_changes", { event: "*", schema: "public", table: "mural_cards" }, () => { fetchMurais(); })
@@ -173,8 +168,7 @@ export function useMurais() {
 
   const save = useCallback(async (mural: Mural) => {
     try {
-      const supabase = createClient();
-      const { data: campaign } = await supabase.from('campaign').select('id').limit(1).single();
+      const { data: campaign } = await supabase.from('campaign').select('id').limit(1).maybeSingle();
       const cid = campaign?.id;
       
       const { error: mErr } = await supabase.from('murals').upsert({
@@ -202,7 +196,10 @@ export function useMurais() {
         }));
         await supabase.from('mural_cards').upsert(cardsToInsert);
         const cardIds = mural.cards.map(c => c.id);
-        await supabase.from('mural_cards').delete().eq('mural_id', mural.id).not('id', 'in', `(${cardIds.join(',')})`);
+        if (cardIds.length > 0) {
+          // Use proper bracket notation for uuid arrays or strings array in filter
+          await supabase.from('mural_cards').delete().eq('mural_id', mural.id).not('id', 'in', `(${cardIds.join(',')})`);
+        }
       } else {
         await supabase.from('mural_cards').delete().eq('mural_id', mural.id);
       }
@@ -220,7 +217,9 @@ export function useMurais() {
         }));
         await supabase.from('mural_connections').upsert(connsToInsert);
         const connIds = mural.connections.map(c => c.id);
-        await supabase.from('mural_connections').delete().eq('mural_id', mural.id).not('id', 'in', `(${connIds.join(',')})`);
+        if (connIds.length > 0) {
+          await supabase.from('mural_connections').delete().eq('mural_id', mural.id).not('id', 'in', `(${connIds.join(',')})`);
+        }
       } else {
         await supabase.from('mural_connections').delete().eq('mural_id', mural.id);
       }
@@ -231,6 +230,13 @@ export function useMurais() {
           ? prev.map(m => m.id === mural.id ? mural : m)
           : [mural, ...prev];
       });
+      
+      // Envia evento de atualização para outros clientes não estarem engessados esperando postgres_changes que pode dar timeout em cascades
+      supabase.channel(`murals_sync`).send({
+        type: 'broadcast',
+        event: 'mural_updated',
+        payload: { muralId: mural.id }
+      });
     } catch (error: any) {
       console.error("Erro ao salvar mural:", error);
       showAlert({ title: "Erro", message: "Falha ao tentar salvar o mural. " + (error.message || JSON.stringify(error)), type: "danger" });
@@ -239,7 +245,6 @@ export function useMurais() {
 
   const remove = useCallback(async (id: string) => {
     try {
-      const supabase = createClient();
       await supabase.from('mural_connections').delete().eq('mural_id', id);
       await supabase.from('mural_cards').delete().eq('mural_id', id);
       await supabase.from('murals').delete().eq('id', id);

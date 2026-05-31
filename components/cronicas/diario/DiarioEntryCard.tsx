@@ -78,7 +78,7 @@ export default function DiarioEntryCard({
     return (
       <div className="timeline-item">
         <div className="timeline-avatar-wrapper">
-          {avatar ? <img src={avatar} alt={displayName} /> : <div className="diario-avatar-placeholder">{displayName.charAt(0).toUpperCase()}</div>}
+          {avatar ? <img src={avatar} alt={displayName} /> : <div className="diario-avatar-placeholder">{(displayName || "?").charAt(0).toUpperCase()}</div>}
         </div>
         <div className="timeline-card" style={{ padding: "0.5rem" }}>
           <DiarioEntryForm
@@ -103,7 +103,7 @@ export default function DiarioEntryCard({
           <img src={avatar} alt={displayName} />
         ) : (
           <div className="diario-avatar-placeholder">
-            {displayName.charAt(0).toUpperCase()}
+            {(displayName || "?").charAt(0).toUpperCase()}
           </div>
         )}
       </div>
@@ -214,7 +214,7 @@ export default function DiarioEntryCard({
                   <img src={avatar} alt={displayName} style={{ width: "40px", height: "40px", borderRadius: "50%" }} />
                 ) : (
                   <div className="diario-avatar-placeholder" style={{ width: "40px", height: "40px", fontSize: "1rem" }}>
-                    {displayName.charAt(0).toUpperCase()}
+                    {(displayName || "?").charAt(0).toUpperCase()}
                   </div>
                 )}
               </div>

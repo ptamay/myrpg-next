@@ -17,7 +17,12 @@ export default function LoginPage() {
   }, [isAuthenticated, loading, router]);
 
   if (loading || isAuthenticated) {
-    return <div style={{display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center'}}>Carregando...</div>;
+    return (
+      <div style={{ display: 'flex', height: '100vh', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: 'var(--bg-dark)' }}>
+        <div className="pulse-indicator" style={{ marginBottom: '1rem', width: '24px', height: '24px' }}></div>
+        <p style={{ color: 'var(--text-muted)' }}>Verificando autenticação...</p>
+      </div>
+    );
   }
 
   return (

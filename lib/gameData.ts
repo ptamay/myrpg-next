@@ -44,6 +44,8 @@ export interface Player {
   background?: string;
   personalGoals?: string;
   inventory?: string;
+  transformation?: Partial<Player>;
+  isTransformed?: boolean;
 }
 
 export interface Npc {
@@ -82,6 +84,8 @@ export interface Npc {
   isDead: boolean;
   isHidden: boolean;
   image?: string;
+  transformation?: Partial<Npc>;
+  isTransformed?: boolean;
 }
 
 export interface GlobalData {

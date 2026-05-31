@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { AppProvider } from "@/contexts/AppContext";
 import { SystemDialogProvider } from "@/contexts/SystemDialogContext";
 import { Inter } from "next/font/google";
 import GlobalScripts from "@/components/GlobalScripts";
@@ -31,11 +30,9 @@ export default function RootLayout({
       </head>
       <body>
         <AuthProvider>
-          <AppProvider>
-            <SystemDialogProvider>
-              {children}
-            </SystemDialogProvider>
-          </AppProvider>
+          <SystemDialogProvider>
+            {children}
+          </SystemDialogProvider>
         </AuthProvider>
         <GlobalScripts />
       </body>

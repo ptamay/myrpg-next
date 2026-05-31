@@ -142,7 +142,7 @@ export default function PersonalNoteModal({ isOpen, onClose }: PersonalNoteModal
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} id="personal-note-modal">
-      <div className="modal-content modal-md" style={{
+      <div className="modal-content modal-md post-it-modal" style={{
         background: noteBg,
         border: `1px solid ${noteBorder}`,
         borderTop: `4px solid ${noteBorder}`,
@@ -220,14 +220,6 @@ export default function PersonalNoteModal({ isOpen, onClose }: PersonalNoteModal
           </form>
         </div>
         <footer className="modal-footer" style={{ padding: "1.5rem 0 0 0", marginTop: "1rem", borderTop: `1px solid ${noteBorder}`, display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
-          {activeData?.topicIndex !== undefined && (
-            <button type="button" className="btn danger-btn ghost-delete-btn" style={{ padding: "0.5rem 1rem", background: "rgba(239, 68, 68, 0.2)", color: "#fca5a5" }} onClick={handleDelete}>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg> Excluir
-            </button>
-          )}
           <button type="submit" className="btn primary-btn" style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${noteAccent}`, color: noteAccent, fontWeight: 800 }} onClick={(e) => {
             const form = (e.target as HTMLElement).closest('.modal-content')?.querySelector('form');
             if (form) form.requestSubmit();
@@ -239,7 +231,8 @@ export default function PersonalNoteModal({ isOpen, onClose }: PersonalNoteModal
 }
 
 export function PersonalNoteDetailModal({ isOpen, onClose }: PersonalNoteModalProps) {
-  const { activeData, setModals } = useAppContext();
+  const { activeData, setModals, diaAtual, indiceBlocoAtivo, jornadaPorDia, setJornadaPorDia } = useAppContext();
+  const { session } = useUserSession();
   
   if (!activeData || !activeData.data) return null;
   const { title, desc, type } = activeData.data;
@@ -248,11 +241,34 @@ export function PersonalNoteDetailModal({ isOpen, onClose }: PersonalNoteModalPr
     setModals((prev: any) => ({ ...prev, personalNoteDetail: false, personalNote: true }));
   };
 
+  const handleDelete = () => {
+    if (!activeData || activeData.topicIndex === undefined || !session?.id) return;
+    
+    const newJornada = { ...jornadaPorDia };
+    if (!newJornada[diaAtual]) return;
+    newJornada[diaAtual] = { ...newJornada[diaAtual] };
+    newJornada[diaAtual].blocos = [...newJornada[diaAtual].blocos];
+    newJornada[diaAtual].blocos[indiceBlocoAtivo] = { ...newJornada[diaAtual].blocos[indiceBlocoAtivo] };
+    const bData = newJornada[diaAtual].blocos[indiceBlocoAtivo];
+    
+    if (bData.playerSessions && bData.playerSessions[session.id]) {
+      bData.playerSessions = { ...bData.playerSessions };
+      bData.playerSessions[session.id] = { ...bData.playerSessions[session.id] };
+      if (bData.playerSessions[session.id].notes) {
+        bData.playerSessions[session.id].notes = [...bData.playerSessions[session.id].notes];
+        bData.playerSessions[session.id].notes.splice(activeData.topicIndex, 1);
+      }
+    }
+
+    setJornadaPorDia(newJornada);
+    onClose();
+  };
+
   const { noteBg, noteBorder, noteAccent, noteIcon } = getNoteStyle(type || "padrao");
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} id="personal-note-detail-modal">
-      <div className="modal-content modal-md" style={{
+      <div className="modal-content modal-md post-it-modal" style={{
         background: noteBg,
         border: `1px solid ${noteBorder}`,
         borderTop: `4px solid ${noteBorder}`,
@@ -288,6 +304,9 @@ export function PersonalNoteDetailModal({ isOpen, onClose }: PersonalNoteModalPr
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             <button onClick={handleEdit} className="btn primary-btn small-btn" style={{ background: "rgba(0,0,0,0.3)", border: `1px solid ${noteAccent}`, color: noteAccent, display: "flex", alignItems: "center", gap: "6px", padding: "0.4rem 0.9rem", fontWeight: 700 }}>
               Editar
+            </button>
+            <button onClick={handleDelete} className="btn danger-btn small-btn" style={{ background: "rgba(239, 68, 68, 0.2)", border: "1px solid rgba(239, 68, 68, 0.4)", color: "#fca5a5", display: "flex", alignItems: "center", gap: "6px", padding: "0.4rem 0.9rem", fontWeight: 700 }}>
+              Excluir
             </button>
             <button className="close-btn" onClick={onClose} style={{ color: "white", background: "rgba(0,0,0,0.2)", borderRadius: "50%", padding: "4px" }}>
               <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none">

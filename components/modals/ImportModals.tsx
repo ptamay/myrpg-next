@@ -13,7 +13,7 @@ interface ImportModalProps {
 
 export function NpcImportTextModal({ isOpen, onClose }: ImportModalProps) {
   const { showAlert } = useSystemDialog();
-  const { setActiveData, setModals } = useAppContext();
+  const { activeData, setActiveData, setModals } = useAppContext();
   const [text, setText] = useState("");
   const templateStr = `Nome: \nTítulo/Ocupação: \nFacção (ally/neutral/enemy): \nRaça: \nAlinhamento: \nND: \nPV Máx: \nCA: \nDeslocamento: \nIniciativa: \nPercepção: \nFOR: 10\nDES: 10\nCON: 10\nINT: 10\nSAB: 10\nCAR: 10\nAtaque Principal: \nResistências: \nImunidades: \nAções (Livre): \nMotivações: \nSegredos: \nTraços: \nItens Visíveis: \nItens Ocultos: \nNotas Extras: \nMagias Diárias: 1º[0] 2º[0] 3º[0] 4º[0] 5º[0] 6º[0] 7º[0] 8º[0] 9º[0]`;
 
@@ -31,39 +31,71 @@ export function NpcImportTextModal({ isOpen, onClose }: ImportModalProps) {
       const lines = text.split("\n");
       const data: any = {};
       lines.forEach((line) => {
-        const [rawKey, ...rest] = line.split(":");
-        if (!rawKey || rest.length === 0) return;
-        const key = rawKey.trim().toLowerCase();
-        const value = rest.join(":").trim();
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        
+        let key = "";
+        let value = "";
+        
+        if (trimmed.includes(":")) {
+          const parts = trimmed.split(":");
+          key = parts[0].normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+          value = parts.slice(1).join(":").trim();
+        } else {
+          const lowerLine = trimmed.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+          const knownKeys = [
+            "titulo ou ocupacao", "itens visiveis", "itens ocultos", "ataque principal", "pv max",
+            "nome", "titulo", "ocupacao", "faccao", "raca", "alinhamento", "nd", "cr", "pv", "hp", "ca", "ac",
+            "deslocamento", "speed", "iniciativa", "init", "percepcao", "perc",
+            "for", "str", "des", "dex", "con", "int", "sab", "wis", "car", "cha",
+            "ataque", "resistencias", "resistencia", "imunidades", "imunidade",
+            "acoes", "acao", "motivacoes", "motivacao", "segredos", "segredo",
+            "tracos", "traco", "visiveis", "visivel", "ocultos", "oculto", "escondidos",
+            "notas", "extras", "magias"
+          ];
+          const foundKey = knownKeys.find(k => lowerLine.startsWith(k + " ") || lowerLine === k);
+          if (foundKey) {
+            key = foundKey;
+            const wordsInKey = foundKey.split(" ").length;
+            value = trimmed.split(" ").slice(wordsInKey).join(" ");
+          } else {
+            return;
+          }
+        }
         
         if (key === "nome") data.name = value;
-        if (key === "título/ocupação" || key.includes("ocupação") || key.includes("título")) data.title = value;
-        if (key.includes("facção")) data.faction = value;
-        if (key === "raça") data.race = value;
+        if (key.includes("titulo") || key.includes("ocupacao")) data.title = value;
+        if (key.includes("faccao")) {
+           const lVal = value.toLowerCase();
+           if(lVal.includes('ally') || lVal.includes('aliado')) data.faction = 'ally';
+           else if(lVal.includes('enemy') || lVal.includes('inimigo')) data.faction = 'enemy';
+           else data.faction = 'neutral';
+        }
+        if (key === "raca") data.race = value;
         if (key === "alinhamento") data.alignment = value;
-        if (key === "nd") data.cr = value;
-        if (key === "pv máx" || key === "pv") data.hpMax = parseInt(value) || 0;
-        if (key === "ca") data.ac = value;
-        if (key === "deslocamento") data.speed = value;
-        if (key === "iniciativa") data.init = value;
-        if (key === "percepção") data.perc = value;
-        if (key === "for") data.str = parseInt(value) || 10;
-        if (key === "des") data.dex = parseInt(value) || 10;
+        if (key === "nd" || key === "cr") data.cr = value;
+        if (key.includes("pv") || key.includes("hp")) data.hpMax = parseInt(value) || 0;
+        if (key === "ca" || key === "ac") data.ac = value;
+        if (key === "deslocamento" || key === "speed") data.speed = value;
+        if (key === "iniciativa" || key === "init") data.init = value;
+        if (key === "percepcao" || key === "perc") data.perc = value;
+        if (key === "for" || key === "str") data.str = parseInt(value) || 10;
+        if (key === "des" || key === "dex") data.dex = parseInt(value) || 10;
         if (key === "con") data.con = parseInt(value) || 10;
         if (key === "int") data.int = parseInt(value) || 10;
-        if (key === "sab") data.wis = parseInt(value) || 10;
-        if (key === "car") data.cha = parseInt(value) || 10;
-        if (key === "ataque principal") data.mainAttack = value;
-        if (key === "resistências") data.res = value;
-        if (key === "imunidades") data.imm = value;
-        if (key.includes("ações")) data.actions = value;
-        if (key === "motivações") data.mot = value;
-        if (key === "segredos") data.sec = value;
-        if (key === "traços") data.traits = value;
-        if (key === "itens visíveis") data.itemsVis = value;
-        if (key === "itens ocultos") data.itemsHid = value;
-        if (key === "notas extras") data.notes = value;
-        if (key === "magias diárias") {
+        if (key === "sab" || key === "wis") data.wis = parseInt(value) || 10;
+        if (key === "car" || key === "cha") data.cha = parseInt(value) || 10;
+        if (key === "ataque principal" || key.includes("ataque")) data.mainAttack = value;
+        if (key === "resistencias" || key.includes("resistencia")) data.res = value;
+        if (key === "imunidades" || key.includes("imunidade")) data.imm = value;
+        if (key.includes("acoes") || key.includes("acao")) data.actions = value;
+        if (key === "motivacoes" || key === "motivacao") data.mot = value;
+        if (key === "segredos" || key === "segredo") data.sec = value;
+        if (key === "tracos" || key === "traco") data.traits = value;
+        if (key.includes("visiveis") || key.includes("visivel")) data.itemsVis = value;
+        if (key.includes("ocultos") || key.includes("oculto") || key.includes("escondidos")) data.itemsHid = value;
+        if (key.includes("notas") || key.includes("extras")) data.notes = value;
+        if (key.includes("magias")) {
           data.hasSpells = true;
           data.spellSlots = {};
           const slots = value.split(" ");
@@ -75,7 +107,13 @@ export function NpcImportTextModal({ isOpen, onClose }: ImportModalProps) {
           });
         }
       });
-      setActiveData(data);
+      const event = new CustomEvent('npcImported', { 
+        detail: { 
+          data, 
+          target: activeData?.importTarget || 'original'
+        } 
+      });
+      window.dispatchEvent(event);
       onClose();
       setModals((prev: any) => ({ ...prev, npcForm: true }));
       showAlert({ title: "Sucesso", message: "Ficha pré-preenchida com sucesso!", type: "success" });

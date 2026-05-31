@@ -7,6 +7,7 @@ import { blocosDeTempo } from "@/lib/gameData";
 import { getInitialJornada } from "@/lib/dataHelpers";
 import DashboardBlock from "./DashboardBlock";
 import { useSystemDialog } from "@/contexts/SystemDialogContext";
+import { createClient } from "@/lib/supabase/client";
 
 export default function DashboardView() {
   const { diaAtual, setDiaAtual, indiceBlocoAtivo, setIndiceBlocoAtivo, jornadaPorDia, setJornadaPorDia, setModals, dadosGlobais, setActiveData } = useAppContext();
@@ -53,6 +54,13 @@ export default function DashboardView() {
 
   const handleResetCampaign = async () => {
     if (await showConfirm({ title: "Resetar Campanha", message: "Apagar todos os dados da campanha e voltar ao Dia 1? Isso não pode ser desfeito.", type: "danger" })) {
+      const supabase = createClient();
+      const { error } = await supabase.rpc('reset_campaign');
+      if (error) {
+        console.error("Erro ao resetar campanha", error);
+        await showAlert({ title: "Erro ao resetar", message: error.message, type: "danger" });
+        return;
+      }
       localStorage.removeItem("myrpg_dia_atual");
       localStorage.removeItem("myrpg_bloco_ativo");
       localStorage.removeItem("myrpg_dados_globais");

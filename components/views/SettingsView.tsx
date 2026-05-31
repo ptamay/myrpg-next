@@ -3,9 +3,10 @@
 import { useAppContext } from "@/contexts/AppContext";
 import { useSystemDialog } from "@/contexts/SystemDialogContext";
 import { useUserSession } from "@/contexts/UserSessionContext";
+import { createClient } from "@/lib/supabase/client";
 
 export default function SettingsView() {
-  const { diaAtual, indiceBlocoAtivo, jornadaPorDia, dadosGlobais } = useAppContext();
+  const { diaAtual, indiceBlocoAtivo, jornadaPorDia, dadosGlobais, setDiaAtual, setIndiceBlocoAtivo, setDadosGlobais, setJornadaPorDia } = useAppContext();
   const { showAlert, showConfirm } = useSystemDialog();
   const { isGM } = useUserSession();
 
@@ -45,11 +46,11 @@ export default function SettingsView() {
           const imported = JSON.parse(ev.target?.result as string);
           if (imported.dadosGlobais && imported.jornadaPorDia) {
             if (await showConfirm({ title: "Restaurar Grimório", message: "Isso irá substituir TODOS os seus dados atuais pelo backup selecionado. Tem certeza?", type: "warning" })) {
-              localStorage.setItem("myrpg_dia_atual", JSON.stringify(imported.diaAtual || 1));
-              localStorage.setItem("myrpg_bloco_ativo", JSON.stringify(imported.indiceBlocoAtivo || 0));
-              localStorage.setItem("myrpg_dados_globais", JSON.stringify(imported.dadosGlobais));
-              localStorage.setItem("myrpg_jornada_por_dia", JSON.stringify(imported.jornadaPorDia));
-              await showAlert({ title: "Sucesso", message: "Backup restaurado com sucesso! O sistema será recarregado.", type: "success" });
+              setDiaAtual(imported.diaAtual || 1);
+              setIndiceBlocoAtivo(imported.indiceBlocoAtivo || 0);
+              setDadosGlobais(imported.dadosGlobais);
+              setJornadaPorDia(imported.jornadaPorDia);
+              await showAlert({ title: "Sucesso", message: "Backup restaurado com sucesso! Os dados foram enviados para o servidor.", type: "success" });
               window.location.reload();
             }
           } else {
@@ -65,6 +66,12 @@ export default function SettingsView() {
 
   const handleReset = async () => {
     if (await showConfirm({ title: "Limpar Tudo", message: "Apagar absolutamente todos os dados e resetar a campanha para o estado inicial? Isso não pode ser desfeito.", type: "danger" })) {
+      const supabase = createClient();
+      const { error } = await supabase.rpc('reset_campaign');
+      if (error) {
+        await showAlert({ title: "Erro ao resetar", message: error.message, type: "danger" });
+        return;
+      }
       localStorage.removeItem("myrpg_dia_atual");
       localStorage.removeItem("myrpg_bloco_ativo");
       localStorage.removeItem("myrpg_dados_globais");
